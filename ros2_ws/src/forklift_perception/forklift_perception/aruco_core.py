@@ -88,11 +88,11 @@ class ArucoEstimator:
             params = cv2.aruco.DetectorParameters_create()
         else:
             params = cv2.aruco.DetectorParameters()
-        if subpix:
-            params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-            params.cornerRefinementWinSize = 5
-            params.cornerRefinementMaxIterations = 50
-            params.cornerRefinementMinAccuracy = 0.01
+        # ArUco's own refinement is left OFF: in OpenCV 4.5 (Ubuntu 22.04) CORNER_REFINE_SUBPIX is ~5x less accurate
+        # than in >= 4.7 (1.4 px vs 0.3 px on a 36 px marker → 10-24° orientation error). We refine with
+        # cv2.cornerSubPix ourselves, which behaves the same on every version (see _refine).
+        params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_NONE
+        self.subpix = subpix
         self.params = params
         self.detector = cv2.aruco.ArucoDetector(self.dict, params) if hasattr(cv2.aruco, "ArucoDetector") else None
         self.min_side_px = min_side_px
@@ -105,7 +105,18 @@ class ArucoEstimator:
             corners, ids, _ = cv2.aruco.detectMarkers(gray, self.dict, parameters=self.params)
         if ids is None:
             return []
-        return [(int(i), c.reshape(4, 2).astype(np.float64)) for i, c in zip(ids.flatten(), corners)]
+        out = [(int(i), c.reshape(4, 2).astype(np.float64)) for i, c in zip(ids.flatten(), corners)]
+        return [(i, self._refine(gray, c)) for i, c in out] if self.subpix else out
+
+    @staticmethod
+    def _refine(gray: np.ndarray, corners: np.ndarray) -> np.ndarray:
+        """Sub-pixel corners. Window = 8 % of the marker side: big enough to average noise, small enough not to
+        reach the marker's inner cells (≥ 12 % does and degrades the pose — measured on 24 synthetic cases)."""
+        side = float(np.mean(np.linalg.norm(corners - np.roll(corners, 1, axis=0), axis=1)))
+        w = max(2, int(round(side * 0.08)))
+        crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
+        pts = cv2.cornerSubPix(gray, corners.astype(np.float32).reshape(-1, 1, 2), (w, w), (-1, -1), crit)
+        return pts.reshape(4, 2).astype(np.float64)
 
     def estimate(self, image: np.ndarray, K: np.ndarray, dist: np.ndarray | None = None) -> list[MarkerObservation]:
         dist = np.zeros(5) if dist is None else np.asarray(dist, dtype=np.float64)
