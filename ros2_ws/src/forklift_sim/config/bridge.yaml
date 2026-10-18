@@ -1,0 +1,39 @@
+# ros_gz_bridge (Humble / Gazebo Fortress) for ONE forklift. `ROBOT_ID` is replaced by the robot namespace (fl1, ...)
+# in sim.launch.py, which writes the result to a temp file and passes it as the bridge's `config_file`.
+# The Gazebo topic names are set in urdf/forklift_gz.urdf.xacro; the ROS names are those of the real robot
+# (docs/13-ros2.md "Topics, types and QoS"), so the stack runs unchanged. /clock is bridged once, in sim.launch.py.
+- ros_topic_name: /ROBOT_ID/scan
+  gz_topic_name: /ROBOT_ID/scan
+  ros_type_name: sensor_msgs/msg/LaserScan
+  gz_type_name: ignition.msgs.LaserScan
+  direction: GZ_TO_ROS
+- ros_topic_name: /ROBOT_ID/imu/data
+  gz_topic_name: /ROBOT_ID/imu/data
+  ros_type_name: sensor_msgs/msg/Imu
+  gz_type_name: ignition.msgs.IMU
+  direction: GZ_TO_ROS
+- ros_topic_name: /ROBOT_ID/image_raw
+  gz_topic_name: /ROBOT_ID/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: ignition.msgs.Image
+  direction: GZ_TO_ROS
+- ros_topic_name: /ROBOT_ID/camera_info
+  gz_topic_name: /ROBOT_ID/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: ignition.msgs.CameraInfo
+  direction: GZ_TO_ROS
+- ros_topic_name: /ROBOT_ID/wheel_odom
+  gz_topic_name: /ROBOT_ID/wheel_odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: ignition.msgs.Odometry
+  direction: GZ_TO_ROS
+- ros_topic_name: /ROBOT_ID/joint_states
+  gz_topic_name: /ROBOT_ID/joint_states
+  ros_type_name: sensor_msgs/msg/JointState
+  gz_type_name: ignition.msgs.Model
+  direction: GZ_TO_ROS
+- ros_topic_name: /ROBOT_ID/cmd_vel
+  gz_topic_name: /ROBOT_ID/cmd_vel
+  ros_type_name: geometry_msgs/msg/Twist
+  gz_type_name: ignition.msgs.Twist
+  direction: ROS_TO_GZ
