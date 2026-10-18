@@ -31,7 +31,7 @@ ARTIFACTS = os.environ.get("SIM_ARTIFACTS", "/tmp/sim_artifacts")
 BAG = os.path.join(ARTIFACTS, "nav_bag")
 GOAL = (2.5, 0.6, 0.0)          # map frame; start J1 = (1.0, 0.6, 0.0)
 XY_TOL, YAW_TOL = 0.10, 0.15    # Nav2 goal checker: 5 cm / 5 deg (NV-11); margin for the EKF vs ground truth
-TOPICS = ["/clock", "/fl1/scan", "/fl1/scan_filtered", "/fl1/wheel_odom", "/fl1/odometry/filtered", "/fl1/imu/data",
+TOPICS = ["/clock", "/fl1/scan", "/fl1/scan_filtered", "/fl1/wheel_odom", "/fl1/ground_truth/odom", "/fl1/odometry/filtered", "/fl1/imu/data",
           "/fl1/cmd_vel", "/fl1/cmd_vel_nav", "/fl1/tf", "/fl1/tf_static", "/fl1/plan", "/fl1/joint_states"]
 
 
@@ -60,7 +60,7 @@ class TestNav(unittest.TestCase):
         rclpy.init()
         cls.node = rclpy.create_node("twin_nav_test", parameter_overrides=[Parameter("use_sim_time", value=True)])
         cls.odom = []
-        cls.node.create_subscription(Odometry, "/fl1/wheel_odom", cls.odom.append, qos_profile_sensor_data)
+        cls.node.create_subscription(Odometry, "/fl1/ground_truth/odom", cls.odom.append, qos_profile_sensor_data)
         cls.nav = ActionClient(cls.node, NavigateToPose, "/fl1/navigate_to_pose")
         cls.costmap, cls.ekf = [], []
         cls.node.create_subscription(Odometry, "/fl1/odometry/filtered", cls.ekf.append, 10)

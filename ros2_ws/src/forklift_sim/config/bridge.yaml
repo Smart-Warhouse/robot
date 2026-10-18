@@ -22,8 +22,8 @@
   ros_type_name: sensor_msgs/msg/CameraInfo
   gz_type_name: ignition.msgs.CameraInfo
   direction: GZ_TO_ROS
-- ros_topic_name: /ROBOT_ID/wheel_odom
-  gz_topic_name: /ROBOT_ID/wheel_odom
+- ros_topic_name: /ROBOT_ID/ground_truth/odom      # world pose; wheel_odom_stub.py turns it into wheel_odom
+  gz_topic_name: /ROBOT_ID/ground_truth/odom
   ros_type_name: nav_msgs/msg/Odometry
   gz_type_name: ignition.msgs.Odometry
   direction: GZ_TO_ROS

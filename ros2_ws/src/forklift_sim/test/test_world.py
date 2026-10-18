@@ -65,6 +65,8 @@ def test_sim_topics_match_the_bridge_and_the_stack():
     for b in bridge:
         assert b["ros_topic_name"] == b["gz_topic_name"] and b["ros_topic_name"].startswith("/ROBOT_ID/")
         assert b["gz_type_name"].startswith("ignition.msgs.")
-    assert {"scan", "imu/data", "image_raw", "wheel_odom", "cmd_vel"} <= bridged   # firmware / sllidar / v4l2 names
+    assert {"scan", "imu/data", "image_raw", "ground_truth/odom", "cmd_vel"} <= bridged   # sllidar / v4l2 names
+    stub = (PKG / "scripts" / "wheel_odom_stub.py").read_text(encoding="utf-8")   # firmware name from the stub
+    assert '"wheel_odom"' in stub and '"ground_truth/odom"' in stub
     ekf = (PKG.parent / "forklift_navigation" / "config" / "ekf.yaml").read_text()
     assert "odom0: wheel_odom" in ekf and "imu0: imu/data" in ekf

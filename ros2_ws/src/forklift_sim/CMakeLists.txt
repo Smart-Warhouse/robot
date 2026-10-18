@@ -4,7 +4,8 @@ project(forklift_sim)
 find_package(ament_cmake REQUIRED)
 
 install(DIRECTORY worlds maps urdf config launch DESTINATION share/${PROJECT_NAME})
-install(PROGRAMS scripts/generate_world.py scripts/cmd_vel_relay.py DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/generate_world.py scripts/cmd_vel_relay.py scripts/wheel_odom_stub.py
+        DESTINATION lib/${PROJECT_NAME})
 
 # Headless Gazebo integration tests (need ros_gz + an X display / Xvfb): only .github/workflows/sim.yml enables them
 # with -DFORKLIFT_SIM_TESTS=ON, so the plain `colcon test` of ci.yml stays free of a running simulator.

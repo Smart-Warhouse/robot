@@ -7,7 +7,7 @@ robot stack (EKF + localisation + Nav2) with use_sim_time.
     ros2 launch forklift_sim sim.launch.py stack:=nav localization:=slam    # slam_toolbox mapping instead of truth
 
 Per robot (namespace /<id>): robot_state_publisher (urdf/forklift_gz.urdf.xacro), spawn at its `SPAWN` node of
-warehouse_map.yaml, ros_gz_bridge (config/bridge.yaml). With stack:=nav also laser_filters (scan -> scan_filtered),
+warehouse_map.yaml, ros_gz_bridge (config/bridge.yaml), wheel_odom_stub (ground_truth/odom -> wheel_odom from 0). With stack:=nav also laser_filters (scan -> scan_filtered),
 robot_localization EKF (wheel_odom + imu/data), localisation (truth: map_server with the generated map and a static
 map -> odom = spawn pose; slam: slam_toolbox mapping), Nav2 from forklift_navigation and the supervisor bypass
 relay cmd_vel_nav -> cmd_vel (the safety supervisor needs the ESP32 ToF ring and the fleet server, not simulated).
@@ -57,6 +57,9 @@ def _robot(ns: str, x: float, y: float, yaw: float, a: dict) -> list:
         Node(package="ros_gz_sim", executable="create", name="spawn", output="screen",
              arguments=["-world", "warehouse", "-name", ns, "-topic", f"/{ns}/robot_description",
                         "-x", f"{x:.3f}", "-y", f"{y:.3f}", "-z", "0.002", "-Y", f"{yaw:.4f}"]),
+        # ESP32 odometry stand-in: wheel_odom from 0 at the spawn pose (Gazebo publishes the world pose)
+        Node(package="forklift_sim", executable="wheel_odom_stub.py", name="wheel_odom_stub", output="screen",
+             parameters=[{"spawn_x": x, "spawn_y": y, "spawn_yaw": yaw, **common}]),
     ]
     if a["stack"] == "nav":
         ekf = RewrittenYaml(source_file=os.path.join(navpkg, "config", "ekf.yaml"), root_key=ns, param_rewrites={},

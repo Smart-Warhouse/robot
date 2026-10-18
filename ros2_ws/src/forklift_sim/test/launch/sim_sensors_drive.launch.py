@@ -26,6 +26,7 @@ ARTIFACTS = os.environ.get("SIM_ARTIFACTS", "/tmp/sim_artifacts")
 WALL_TIMEOUT = 240.0
 # topic, type, expected Hz, accepted band (sim time); the camera is 15 Hz here (real 30 Hz, JS-03)
 RATES = [("/fl1/scan", LaserScan, 10.0, (8.0, 12.0)), ("/fl1/wheel_odom", Odometry, 50.0, (40.0, 60.0)),
+         ("/fl1/ground_truth/odom", Odometry, 50.0, (40.0, 60.0)),
          ("/fl1/imu/data", Imu, 100.0, (80.0, 120.0)), ("/fl1/image_raw", Image, 15.0, (5.0, 18.0))]
 
 
@@ -101,6 +102,8 @@ class TestTwin(unittest.TestCase):
         self.assertTrue(any("fork_lift_joint" in m.name for m in self.msgs["/fl1/joint_states"]), "no fork joint")
         odom = self.msgs["/fl1/wheel_odom"][-1]
         self.assertEqual((odom.header.frame_id, odom.child_frame_id), ("odom", "base_link"))
+        self.assertLess(math.hypot(odom.pose.pose.position.x, odom.pose.pose.position.y), 0.01)  # starts at 0
+        odom = self.msgs["/fl1/ground_truth/odom"][-1]
         # spawned at J1 (1.0, 0.6) heading +x; the LiDAR (0.10 m behind base_link) sees the south wall 0.6 m to its
         # right and the east wall straight ahead
         self.assertAlmostEqual(odom.pose.pose.position.x, 1.0, delta=0.03)
@@ -126,17 +129,19 @@ class TestTwin(unittest.TestCase):
         self.spin_until(lambda: self.sim_now() - t1 > 1.0, timeout=60)   # settle
 
     def test_2_scripted_drive(self):
-        self.assertTrue(self.spin_until(lambda: self.msgs["/fl1/wheel_odom"] and self.sim_now() > 0.0))
-        a = self.msgs["/fl1/wheel_odom"][-1]
+        self.assertTrue(self.spin_until(lambda: self.msgs["/fl1/ground_truth/odom"] and self.sim_now() > 0.0))
+        gt = "/fl1/ground_truth/odom"
+        a, wa = self.msgs[gt][-1], self.msgs["/fl1/wheel_odom"][-1]
         self.drive(0.2, 0.0, 5.0)                                     # 1.0 m straight along the bottom corridor
-        b = self.msgs["/fl1/wheel_odom"][-1]
+        b, wb = self.msgs[gt][-1], self.msgs["/fl1/wheel_odom"][-1]
+        self.assertAlmostEqual(wb.pose.pose.position.x - wa.pose.pose.position.x, 1.0, delta=0.1)   # odom agrees
         dx, dy = b.pose.pose.position.x - a.pose.pose.position.x, b.pose.pose.position.y - a.pose.pose.position.y
         print(f"straight: dx={dx:.3f} dy={dy:.3f} dyaw={yaw_of(b) - yaw_of(a):.3f}")
         self.assertAlmostEqual(dx, 1.0, delta=0.1)
         self.assertLess(abs(dy), 0.05)
         self.assertLess(abs(yaw_of(b) - yaw_of(a)), 0.05)
         self.drive(0.1, 0.3, 3.0)                                     # left arc, 0.9 rad
-        c = self.msgs["/fl1/wheel_odom"][-1]
+        c = self.msgs[gt][-1]
         dyaw = math.atan2(math.sin(yaw_of(c) - yaw_of(b)), math.cos(yaw_of(c) - yaw_of(b)))
         print(f"arc: dyaw={dyaw:.3f}")
         self.assertAlmostEqual(dyaw, 0.9, delta=0.1)
