@@ -41,10 +41,15 @@ def test_costmap_filters_configured():
         assert NAV[cm][cm]["ros__parameters"]["resolution"] == 0.02
 
 
-def test_behavior_tree_has_no_spin():
-    root = ET.parse(PKG / "behavior_trees" / "navigate_lane.xml").getroot()
+@pytest.mark.parametrize("xml, plan", [("navigate_lane.xml", "ComputePathToPose"),
+                                       ("navigate_through_lanes.xml", "ComputePathThroughPoses")])
+def test_behavior_trees_have_no_spin(xml, plan):
+    # both bt_navigator trees are loaded at configure; Nav2's default through-poses tree has Spin, which is not
+    # registered here, so the launch file must point default_nav_through_poses_bt_xml at ours
+    root = ET.parse(PKG / "behavior_trees" / xml).getroot()
     tags = {e.tag for e in root.iter()}
-    assert "Spin" not in tags and {"ComputePathToPose", "FollowPath", "BackUp", "Wait"} <= tags
+    assert "Spin" not in tags and {plan, "FollowPath", "BackUp", "Wait"} <= tags
+    assert xml in (PKG / "launch" / "navigation.launch.py").read_text(encoding="utf-8")
 
 
 def test_masks_are_up_to_date_with_the_warehouse_map(warehouse_map_path, tmp_path):

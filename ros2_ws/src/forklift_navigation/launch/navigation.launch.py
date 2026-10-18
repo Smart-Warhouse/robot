@@ -30,6 +30,8 @@ def _setup(context):
     tf = [("/tf", "tf"), ("/tf_static", "tf_static")]
     to_nav = [("cmd_vel", "cmd_vel_nav")]
     bt_xml = f"{share}/behavior_trees/navigate_lane.xml"
+    # Nav2's default through-poses tree contains Spin (not registered here): bt_navigator would not configure
+    bt_poses_xml = f"{share}/behavior_trees/navigate_through_lanes.xml"
     actions = [
         Node(package="nav2_controller", executable="controller_server", output="screen", parameters=[params],
              remappings=tf + to_nav),
@@ -40,7 +42,8 @@ def _setup(context):
         Node(package="nav2_behaviors", executable="behavior_server", output="screen", parameters=[params],
              remappings=tf + to_nav),
         Node(package="nav2_bt_navigator", executable="bt_navigator", output="screen",
-             parameters=[params, {"default_nav_to_pose_bt_xml": bt_xml}], remappings=tf),
+             parameters=[params, {"default_nav_to_pose_bt_xml": bt_xml,
+                                 "default_nav_through_poses_bt_xml": bt_poses_xml}], remappings=tf),
         Node(package="nav2_map_server", executable="map_server", name="keepout_filter_mask_server", output="screen",
              parameters=[params, {"yaml_filename": LaunchConfiguration("keepout_mask").perform(context)}],
              remappings=tf),
