@@ -44,7 +44,11 @@ def test_package_manifest(pkg):
     build = root.find("export/build_type").text
     assert build in ("ament_cmake", "ament_python")
     buildtool = [e.text for e in root.findall("buildtool_depend")]
-    assert build in buildtool
+    if build == "ament_cmake":
+        assert "ament_cmake" in buildtool
+    else:
+        # `ament_python` is a build type, not a rosdep key: listing it makes `rosdep install` fail (CI run 1)
+        assert "ament_python" not in buildtool
     if build == "ament_python":
         assert (pkg / "setup.py").exists() and (pkg / "setup.cfg").exists()
         assert (pkg / "resource" / pkg.name).exists()
