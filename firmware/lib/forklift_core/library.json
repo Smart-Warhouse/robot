@@ -1,0 +1,10 @@
+{
+  "name": "forklift_core",
+  "version": "0.1.0",
+  "description": "Hardware-independent forklift logic: safety, Ackermann, odometry, PID, Madgwick, calibration (pure C++17, no Arduino headers).",
+  "frameworks": "*",
+  "platforms": "*",
+  "build": {
+    "flags": "-std=gnu++17"
+  }
+}

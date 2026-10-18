@@ -1,0 +1,10 @@
+# host test venv + colcon outputs
+.venv/
+build/
+install/
+log/
+__pycache__/
+*.pyc
+.pytest_cache/
+# rosbags recorded by forklift_bringup record.launch.py
+bags/

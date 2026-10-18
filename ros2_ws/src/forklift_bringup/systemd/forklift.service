@@ -1,0 +1,23 @@
+# JS-07: start the forklift stack at boot.
+#   sudo cp forklift.service /etc/systemd/system/ && sudo cp forklift.env.example /etc/forklift/forklift.env
+#   sudo systemctl daemon-reload && sudo systemctl enable --now forklift
+#   journalctl -u forklift -f
+[Unit]
+Description=Autonomous forklift ROS 2 stack (forklift_bringup)
+After=network-online.target time-sync.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forklift
+Group=forklift
+SupplementaryGroups=dialout video
+EnvironmentFile=/etc/forklift/forklift.env
+ExecStart=/home/forklift/grad-project/code/ros2_ws/install/forklift_bringup/lib/forklift_bringup/forklift-start.sh
+KillSignal=SIGINT
+TimeoutStopSec=20
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

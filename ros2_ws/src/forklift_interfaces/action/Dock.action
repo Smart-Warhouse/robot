@@ -1,0 +1,16 @@
+# Final approach + fork insertion under a pallet (requirements §8). Served by forklift_rl/dock_server.
+int32 pallet_id          # expected ArUco id on the pallet face (1-20); 0 = any pallet marker
+float32 support_height_mm # height of the surface the pallet stands on (task from/to height_mm)
+string controller        # rl | classical | "" (= parameter default)
+---
+bool success
+string message           # failure reason (timeout, marker_lost, collision, safety_stop, cancelled)
+float32 lateral_error_m
+float32 heading_error_rad
+float32 duration_s
+---
+float32 dx               # pallet face in the fork-carriage frame
+float32 dy
+float32 dyaw
+bool marker_visible
+uint32 step

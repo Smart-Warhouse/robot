@@ -1,0 +1,160 @@
+# All parameters of the forklift's own nodes (JS-05: no constants in code). Keys use `/**/<node>` so the same file
+# works in every robot namespace (/fl1, /fl2, /fl3 — NFR-09: a 4th robot needs no change here). Per-robot values
+# (robot_id, serial ports, MQTT password file) come from the launch arguments / /etc/forklift/forklift.env.
+# Nav2 / slam_toolbox / EKF parameters live in forklift_navigation/config; sensors in sllidar.yaml, laser_filters.yaml.
+# Floats are written with a decimal point on purpose (rclpy parameter types must match the declared defaults).
+
+/**/mission_node:
+  ros__parameters:
+    # robot_id, warehouse_map_file and dimensions_file are set by bringup.launch.py
+    map_frame: map
+    base_frame: base_link
+    tick_hz: 10.0
+    state_hz: 2.0                    # CM-04 / docs/03: wh/fl/{id}/state at 2 Hz
+    grant_retry_s: 0.5               # docs/03: re-request a denied lane every 500 ms
+    server_loss_timeout_s: 3.0       # SF-05
+    teleop_timeout_s: 0.5            # dead-man for manual drive
+    require_reset_after_server_loss: false   # true = reference client behaviour (operator reset after a loss)
+    mqtt:
+      host: 192.168.50.10            # fleet server / Mosquitto (CM-02: static IP) — PLACEHOLDER
+      port: 1883
+      username: ""                   # default: the robot id (CM-01)
+      password_file: /etc/forklift/mqtt_password
+      keepalive_s: 2
+    nav_attempts: 3                  # NV-10
+    recovery_wait_s: 2.0
+    recovery_backup_m: 0.05
+    dock_attempts: 2
+    entry_offset_mm: 8.0
+    lift_off_mm: 20.0
+    travel_loaded_mm: 20.0           # below the 50 mm SF-08 threshold
+    travel_empty_mm: 0.0
+    backout_m: 0.25
+    place_m: 0.25
+    straight_speed_mps: 0.05
+    teleop_lift_rate_mm_s: 30.0
+    lift_max_mm: 120.0
+    footprint_padding_m: 0.0
+    fork_state_topic: fork_state/typed
+
+/**/lift_server:
+  ros__parameters:
+    tolerance_mm: 3.0                # FW-04
+    timeout_s: 8.0
+    settle_samples: 3
+    lift_max_mm: 120.0
+    rate_hz: 20.0
+    fork_state_topic: fork_state/typed
+
+/**/safety_supervisor:
+  ros__parameters:
+    rate_hz: 20.0
+    max_speed: 0.3                   # NFR-03
+    max_reverse_speed: 0.15
+    max_omega: 1.0
+    max_accel: 0.5
+    max_decel: 1.0
+    raised_fork_mm: 50.0             # SF-08
+    raised_speed: 0.1
+    docking_speed: 0.1               # SF-03 / AI-06
+    tof_names: [front, front_left, front_right, left, right, rear]   # = firmware TofIndex order
+    tof_forward: [front, front_left, front_right]
+    tof_reverse: [rear]
+    tof_side: [left, right]
+    docking_ignored_tof: [front]     # = firmware TOF_MASK_DOCKING_IGNORE
+    tof_slow_m: 0.4                  # SF-02
+    tof_stop_m: 0.15
+    tof_slow_factor: 0.3
+    side_stop_m: 0.05
+    tof_timeout_s: 0.3
+    person_slow_m: 1.0               # SF-06
+    person_stop_m: 0.5
+    person_speed: 0.1
+    person_timeout_s: 0.5
+    person_detector_required: false  # set true once the YOLO node publishes person_distance
+    cmd_timeout_s: 0.5
+    fleet_status_timeout_s: 1.0
+    server_loss_timeout_s: 3.0       # SF-05
+    lift_max_mm: 120.0
+    fork_state_topic: fork_state/typed
+
+/**/fork_joint_state_publisher:
+  ros__parameters:
+    joint_name: fork_lift_joint
+    lift_max_m: 0.12
+    fork_state_topic: fork_state/typed
+
+/**/aruco_node:
+  ros__parameters:
+    dictionary: DICT_4X4_50          # PC-03
+    pallet_ids: [1, 20]
+    location_ids: [21, 40]
+    pallet_marker_size_m: 0.03
+    location_marker_size_m: 0.06
+    subpix: true
+    min_side_px: 12.0
+    average_window: 5                # PC-05
+    max_gap_s: 0.5
+    max_jump_m: 0.05
+    min_confidence: 0.2
+    map_frame: map
+    target_pallet_id: 0
+
+/**/initial_pose_node:
+  ros__parameters:
+    # warehouse_map_file is set by bringup.launch.py
+    marker_overrides_file: ""        # measured marker poses (EN-08), see markers.example.yaml
+    allowed_marker_ids: [35, 36, 37, 38]   # charger markers (NV-04)
+    samples: 10
+    max_spread_m: 0.02
+    max_spread_rad: 0.035
+    max_distance_m: 1.0
+    base_frame: base_link
+    map_frame: map
+    covariance_xy: 0.0004
+    covariance_yaw: 0.0012
+
+/**/dock_server:
+  ros__parameters:
+    # model_path is set by bringup.launch.py (default code/training/models/docking_v3/policy.onnx)
+    controller: rl                   # rl | classical (AI-07 comparison)
+    providers: [TensorrtExecutionProvider, CUDAExecutionProvider, CPUExecutionProvider]
+    fp16: true                       # AI-05: TensorRT FP16
+    trt_cache_dir: /home/forklift/.cache/forklift_trt
+    map_frame: map
+    fork_frame: fork
+    carriage_x: 0.03
+    tof_lcr_indices: [1, 0, 2]       # policy ToF (left corner, centre, right corner) <- tof_ring indices
+    fork_state_topic: fork_state/typed
+    docking:                         # MUST equal code/training/forklift_rl/config.yaml (test_docking.py checks it)
+      wheelbase: 0.2
+      fork_length: 0.18
+      fork_thickness: 0.012
+      fork_clearance: 0.004
+      lift_max: 0.12
+      pallet_height: 0.035
+      pallet_deck_thickness: 0.008
+      rate_hz: 20.0                  # AI-05: 20 Hz
+      v_max: 0.1
+      steer_max_deg: 30.0
+      lift_rate: 0.05
+      max_steps: 300
+      success_insertion: 0.8
+      success_lateral: 0.01
+      out_of_range: 1.0
+    episode:
+      marker_centre_above_support_m: 0.0175
+      visible_timeout_s: 0.15
+      marker_wait_s: 2.0
+      safety_stop_timeout_s: 3.0
+      success_lateral_m: 0.02
+      require_tcrt: true
+
+/**/camera:
+  ros__parameters:                   # v4l2_camera (USB / IMX219 via v4l2), JS-03: 640x480 @ 30 fps
+    video_device: /dev/video0
+    image_size: [640, 480]
+    pixel_format: YUYV
+    output_encoding: mono8
+    camera_frame_id: camera_optical_frame
+    camera_info_url: file:///etc/forklift/camera_info.yaml   # PC-01 calibration result

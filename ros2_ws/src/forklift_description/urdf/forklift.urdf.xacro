@@ -1,0 +1,172 @@
+<?xml version="1.0"?>
+<!-- 1:14 autonomous forklift (Huina 1577 Pro conversion). TF tree (JS-06):
+       map -> odom (slam_toolbox) -> base_link (robot_localization EKF)
+       base_link -> laser, imu, tof_*, mast, wheels, fork (prismatic lift joint) -> camera_link -> camera_optical_frame
+     The camera is on the fork carriage (ME-05), so it is a child of `fork` and moves with the lift.
+     All dimensions come from config/dimensions.yaml (PLACEHOLDER until ME-01). -->
+<robot name="forklift" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="dims_file" default="$(find forklift_description)/config/dimensions.yaml"/>
+  <xacro:arg name="prefix" default=""/>
+  <xacro:property name="d" value="${xacro.load_yaml('$(arg dims_file)')}"/>
+  <xacro:property name="p" value="$(arg prefix)"/>
+
+  <material name="body_yellow"><color rgba="0.95 0.75 0.1 1"/></material>
+  <material name="dark"><color rgba="0.15 0.15 0.15 1"/></material>
+  <material name="steel"><color rgba="0.6 0.6 0.65 1"/></material>
+
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${p}${name}">
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${d['wheel_radius']}" length="${d['wheel_width']}"/></geometry>
+        <material name="dark"/>
+      </visual>
+    </link>
+    <joint name="${p}${name}_joint" type="fixed">
+      <parent link="${p}base_link"/>
+      <child link="${p}${name}"/>
+      <origin xyz="${x} ${y} ${d['wheel_radius']}"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- chassis -->
+  <xacro:property name="body_sx" value="${d['body_length'] + d['body_front']}"/>
+  <xacro:property name="body_cx" value="${(d['body_front'] - d['body_length']) / 2}"/>
+  <xacro:property name="body_cz" value="${d['wheel_radius'] + d['body_height'] / 2}"/>
+  <link name="${p}base_link">
+    <visual>
+      <origin xyz="${body_cx} 0 ${body_cz}"/>
+      <geometry><box size="${body_sx} ${d['body_width']} ${d['body_height']}"/></geometry>
+      <material name="body_yellow"/>
+    </visual>
+    <collision>
+      <origin xyz="${body_cx} 0 ${body_cz}"/>
+      <geometry><box size="${body_sx} ${d['body_width']} ${d['body_height']}"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="${body_cx} 0 ${body_cz}"/>
+      <mass value="1.2"/>
+      <inertia ixx="0.005" iyy="0.012" izz="0.012" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <xacro:wheel name="wheel_front_left" x="0" y="${d['body_width']/2 - d['wheel_width']/2}"/>
+  <xacro:wheel name="wheel_front_right" x="0" y="${-d['body_width']/2 + d['wheel_width']/2}"/>
+  <xacro:wheel name="wheel_rear_left" x="${-d['wheelbase']}" y="${d['body_width']/2 - d['wheel_width']/2}"/>
+  <xacro:wheel name="wheel_rear_right" x="${-d['wheelbase']}" y="${-d['body_width']/2 + d['wheel_width']/2}"/>
+
+  <!-- mast (fixed uprights) -->
+  <link name="${p}mast">
+    <visual>
+      <origin xyz="0 0 ${d['mast_height']/2}"/>
+      <geometry><box size="0.015 ${d['fork_spacing'] + d['fork_width']} ${d['mast_height']}"/></geometry>
+      <material name="steel"/>
+    </visual>
+  </link>
+  <joint name="${p}mast_joint" type="fixed">
+    <parent link="${p}base_link"/>
+    <child link="${p}mast"/>
+    <origin xyz="${d['mast_x']} 0 0"/>
+  </joint>
+
+  <!-- fork carriage: origin at the carriage face on the fork bottom; joint position = lift height
+       (fork_state.height_mm / 1000, published on joint_states by fork_joint_state_publisher) -->
+  <link name="${p}fork">
+    <visual>
+      <origin xyz="${d['fork_length']/2} ${d['fork_spacing']/2} ${d['fork_thickness']/2}"/>
+      <geometry><box size="${d['fork_length']} ${d['fork_width']} ${d['fork_thickness']}"/></geometry>
+      <material name="steel"/>
+    </visual>
+    <visual>
+      <origin xyz="${d['fork_length']/2} ${-d['fork_spacing']/2} ${d['fork_thickness']/2}"/>
+      <geometry><box size="${d['fork_length']} ${d['fork_width']} ${d['fork_thickness']}"/></geometry>
+      <material name="steel"/>
+    </visual>
+    <visual>
+      <origin xyz="-0.005 0 0.04"/>
+      <geometry><box size="0.01 ${d['fork_spacing'] + d['fork_width']} 0.08"/></geometry>
+      <material name="dark"/>
+    </visual>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="1e-4" iyy="1e-4" izz="1e-4" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+  <joint name="${p}fork_lift_joint" type="prismatic">
+    <parent link="${p}base_link"/>
+    <child link="${p}fork"/>
+    <origin xyz="${d['carriage_x']} 0 ${d['fork_clearance']}"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="${d['lift_max']}" effort="20" velocity="0.05"/>
+  </joint>
+
+  <!-- fork tip frames (TCRT5000, ME-09) -->
+  <link name="${p}fork_tip_left"/>
+  <joint name="${p}fork_tip_left_joint" type="fixed">
+    <parent link="${p}fork"/>
+    <child link="${p}fork_tip_left"/>
+    <origin xyz="${d['fork_length']} ${d['fork_spacing']/2} ${d['fork_thickness']}"/>
+  </joint>
+  <link name="${p}fork_tip_right"/>
+  <joint name="${p}fork_tip_right_joint" type="fixed">
+    <parent link="${p}fork"/>
+    <child link="${p}fork_tip_right"/>
+    <origin xyz="${d['fork_length']} ${-d['fork_spacing']/2} ${d['fork_thickness']}"/>
+  </joint>
+
+  <!-- camera on the carriage, pitched down; optical frame = OpenCV convention (z forward, x right, y down) -->
+  <link name="${p}camera_link">
+    <visual>
+      <geometry><box size="0.01 0.025 0.025"/></geometry>
+      <material name="dark"/>
+    </visual>
+  </link>
+  <joint name="${p}camera_joint" type="fixed">
+    <parent link="${p}fork"/>
+    <child link="${p}camera_link"/>
+    <origin xyz="${d['camera_x'] - d['carriage_x']} 0 ${d['camera_z']}" rpy="0 ${d['camera_pitch']} 0"/>
+  </joint>
+  <link name="${p}camera_optical_frame"/>
+  <joint name="${p}camera_optical_joint" type="fixed">
+    <parent link="${p}camera_link"/>
+    <child link="${p}camera_optical_frame"/>
+    <origin rpy="${-pi/2} 0 ${-pi/2}"/>
+  </joint>
+
+  <!-- LiDAR on the overhead guard (ME-04) -->
+  <link name="${p}laser">
+    <visual>
+      <origin xyz="0 0 -0.02"/>
+      <geometry><cylinder radius="0.028" length="0.04"/></geometry>
+      <material name="dark"/>
+    </visual>
+  </link>
+  <joint name="${p}laser_joint" type="fixed">
+    <parent link="${p}base_link"/>
+    <child link="${p}laser"/>
+    <origin xyz="${d['laser_x']} 0 ${d['laser_z']}" rpy="0 0 ${d['laser_yaw']}"/>
+  </joint>
+
+  <!-- IMU (MPU9250 next to the ESP32) -->
+  <link name="${p}imu"/>
+  <joint name="${p}imu_joint" type="fixed">
+    <parent link="${p}base_link"/>
+    <child link="${p}imu"/>
+    <origin xyz="${d['imu_x']} 0 ${d['imu_z']}"/>
+  </joint>
+
+  <!-- ToF ring (ME-06): frames tof_<name>, one per entry of dimensions.yaml `tof` -->
+  <xacro:macro name="tof_frames" params="sensors">
+    <xacro:if value="${len(sensors) > 0}">
+      <xacro:property name="s" value="${sensors[0]}"/>
+      <link name="${p}tof_${s['name']}"/>
+      <joint name="${p}tof_${s['name']}_joint" type="fixed">
+        <parent link="${p}base_link"/>
+        <child link="${p}tof_${s['name']}"/>
+        <origin xyz="${s['x']} ${s['y']} ${d['tof_z']}" rpy="0 0 ${s['yaw']}"/>
+      </joint>
+      <xacro:tof_frames sensors="${sensors[1:]}"/>
+    </xacro:if>
+  </xacro:macro>
+  <xacro:tof_frames sensors="${d['tof']}"/>
+</robot>

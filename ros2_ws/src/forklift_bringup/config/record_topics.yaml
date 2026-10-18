@@ -1,0 +1,30 @@
+# Topics recorded by record.launch.py for every run (JS-08), relative to the robot namespace.
+# Enough to replay localisation / navigation and to fine-tune the docking policy (AI-07).
+topics:
+  - scan
+  - scan_filtered
+  - wheel_odom
+  - odometry/filtered
+  - imu/data
+  - cmd_vel
+  - cmd_vel_nav
+  - cmd_vel_dock
+  - cmd_vel_teleop
+  - lift_cmd
+  - tof_ring
+  - fork_state
+  - fork_state/typed
+  - battery
+  - safety_state
+  - safety/status
+  - fleet_status
+  - docking_mode
+  - diagnostics
+  - pallet_pose
+  - pallet_detection
+  - initialpose
+  - plan
+  - tf
+  - tf_static
+absolute_topics:
+  - /rosout

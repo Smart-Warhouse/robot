@@ -1,0 +1,6 @@
+# Clear a latched SAFE / STOP state (FW-08, operator `reset` cmd). ESTOP from the hardware button is cleared on
+# the ESP32 only once the button is released.
+string reason
+---
+bool success
+string message

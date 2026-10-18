@@ -1,0 +1,10 @@
+# Move the forks to an absolute height (served by forklift_mission/lift_server, FW-04: ± 3 mm).
+float32 height_mm
+float32 tolerance_mm     # 0 = server default
+float32 timeout_s        # 0 = server default
+---
+bool success
+float32 final_height_mm
+string message
+---
+float32 current_height_mm

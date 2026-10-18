@@ -1,0 +1,5 @@
+# Measured ArUco marker poses in the map frame (EN-08: +-2 mm) that override the poses derived from
+# warehouse_map.yaml locations. Copy to /etc/forklift/markers.yaml and set initial_pose_node.marker_overrides_file.
+# normal_yaw = direction the marker face points to (towards the robot standing in front of it).
+markers:
+  - {id: 35, x: 1.000, y: 4.000, z: 0.020, normal_yaw: -1.5708}   # CHARGE-1 (example = derived default)

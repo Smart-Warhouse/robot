@@ -1,0 +1,11 @@
+# Host (Windows / any OS without ROS) test environment for the pure-Python cores.
+#   python -m venv .venv && .venv/Scripts/python -m pip install -r requirements-host.txt
+pytest>=8
+pyyaml>=6
+numpy>=1.24
+opencv-python-headless>=4.8
+paho-mqtt>=2.0
+onnx>=1.15
+onnxruntime>=1.17
+jsonschema>=4.20
+xacro>=1.13

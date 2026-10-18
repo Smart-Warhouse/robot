@@ -1,0 +1,47 @@
+# Forklift geometry for the URDF (JS-06, PC-02). Units: metres, radians.
+# PLACEHOLDER values until the first forklift is opened and measured (ME-01, plan.md A2). Keep in sync with
+# code/training/forklift_rl/config.yaml (`forklift:` block) and forklift_bringup/config/forklift.yaml (`footprint`);
+# src/forklift_mission/test/test_footprint.py checks the Nav2 footprint against this file.
+# base_link = centre of the front (drive, non-steered) axle projected on the floor; x forward (towards the forks).
+
+wheelbase: 0.20            # front axle -> rear (steered) axle
+body_length: 0.30          # chassis behind the front axle
+body_front: 0.03           # chassis ahead of the front axle (= fork carriage x)
+body_width: 0.187          # Huina 1577 Pro outer width
+body_height: 0.12
+wheel_radius: 0.035
+wheel_width: 0.03
+
+mast_height: 0.317
+mast_x: 0.02               # mast uprights, just behind the carriage
+
+carriage_x: 0.03           # fork carriage face ahead of the front axle (training: carriage_x)
+fork_length: 0.18
+fork_width: 0.035
+fork_thickness: 0.012
+fork_spacing: 0.09         # centre-to-centre
+fork_clearance: 0.004      # fork bottom above the floor at lift = 0
+lift_max: 0.12
+
+pallet_depth: 0.20         # carried pallet, for the loaded footprint (NV-12)
+pallet_width: 0.20
+
+laser_x: -0.10             # RPLIDAR C1 on the overhead guard (ME-04), above mast and carried pallet
+laser_z: 0.36
+laser_yaw: 0.0
+
+camera_x: 0.035            # on the fork carriage (ME-05) - moves with the lift
+camera_z: 0.05             # above the fork bottom
+camera_pitch: 0.349        # 20 deg down (ME-05: 15-25 deg)
+
+imu_x: -0.12
+imu_z: 0.06
+
+tof_z: 0.03                # VL53L1X ring (ME-06): order = index in the `tof_ring` Float32MultiArray
+tof:
+  - {name: front,       x: 0.03,  y: 0.0,     yaw: 0.0}
+  - {name: front_left,  x: 0.03,  y: 0.09,    yaw: 0.35}
+  - {name: front_right, x: 0.03,  y: -0.09,   yaw: -0.35}
+  - {name: left,        x: -0.13, y: 0.0935,  yaw: 1.5708}
+  - {name: right,       x: -0.13, y: -0.0935, yaw: -1.5708}
+  - {name: rear,        x: -0.30, y: 0.0,     yaw: 3.1416}

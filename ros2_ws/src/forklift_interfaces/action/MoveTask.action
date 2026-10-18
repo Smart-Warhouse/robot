@@ -1,0 +1,24 @@
+# Run one move_pallet task locally without the fleet server (bench tests). Mirrors docs/schemas/task.schema.json;
+# `route` may be empty (the robot plans on the lane graph).
+string task_id
+int32 pallet_id
+string from_location
+string from_node
+float32 from_x
+float32 from_y
+float32 from_yaw
+int32 from_height_mm
+string to_location
+string to_node
+float32 to_x
+float32 to_y
+float32 to_yaw
+int32 to_height_mm
+string[] route
+---
+bool success
+string status            # done | failed
+string reason
+---
+string phase             # task_status phases
+string node

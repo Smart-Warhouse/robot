@@ -1,0 +1,36 @@
+# LiDAR driver + self-filter (JS-02, PC-09). Keys use `/**/<node>` (namespace-agnostic).
+
+/**/sllidar_node:
+  ros__parameters:                   # RPLIDAR C1 (sllidar_ros2), 10 Hz
+    channel_type: serial
+    serial_port: /dev/ttyUSB0        # overridden by the launch argument lidar_port
+    serial_baudrate: 460800
+    frame_id: laser
+    inverted: false
+    angle_compensate: true
+    scan_mode: Standard
+    scan_frequency: 10.0
+
+/**/scan_to_scan_filter_chain:
+  ros__parameters:                   # laser_filters: drop the points that hit our own mast and guard pillars
+    filter1:
+      name: self_box
+      type: laser_filters/LaserScanBoxFilter
+      params:
+        box_frame: base_link
+        min_x: -0.32                 # PLACEHOLDER: chassis + forks + carried pallet (dimensions.yaml)
+        max_x: 0.25
+        min_y: -0.11
+        max_y: 0.11
+        min_z: -0.1
+        max_z: 0.6
+        invert: false
+    filter2:
+      name: range
+      type: laser_filters/LaserScanRangeFilter
+      params:
+        use_message_range_limits: false
+        lower_threshold: 0.05
+        upper_threshold: 12.0
+        lower_replacement_value: .inf
+        upper_replacement_value: .inf
