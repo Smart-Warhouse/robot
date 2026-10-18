@@ -19,10 +19,10 @@ from ament_index_python.packages import get_package_share_directory
 from launch.actions import ExecuteProcess, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from nav2_msgs.action import NavigateToPose
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import OccupancyGrid, Odometry
 from rclpy.action import ActionClient
 from rclpy.parameter import Parameter
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 
 ARTIFACTS = os.environ.get("SIM_ARTIFACTS", "/tmp/sim_artifacts")
 BAG = os.path.join(ARTIFACTS, "nav_bag")
@@ -59,6 +59,9 @@ class TestNav(unittest.TestCase):
         cls.odom = []
         cls.node.create_subscription(Odometry, "/fl1/wheel_odom", cls.odom.append, qos_profile_sensor_data)
         cls.nav = ActionClient(cls.node, NavigateToPose, "/fl1/navigate_to_pose")
+        cls.costmap = []
+        latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        cls.node.create_subscription(OccupancyGrid, "/fl1/global_costmap/costmap", cls.costmap.append, latched)
 
     @classmethod
     def tearDownClass(cls):
@@ -71,8 +74,21 @@ class TestNav(unittest.TestCase):
             rclpy.spin_once(self.node, timeout_sec=0.1)
         return future.result() if future.done() else None
 
+    def cost(self, x, y):
+        g = self.costmap[-1]
+        i = int((x - g.info.origin.position.x) / g.info.resolution)
+        j = int((y - g.info.origin.position.y) / g.info.resolution)
+        return g.data[j * g.info.width + i] if 0 <= i < g.info.width and 0 <= j < g.info.height else None
+
     def test_navigate_to_pose(self):
         self.assertTrue(self.nav.wait_for_server(timeout_sec=180.0), "navigate_to_pose action server missing")
+        # the planner rejects a start/goal on unknown cells (allow_unknown: false): wait for the static map
+        end = time.monotonic() + 120.0
+        while time.monotonic() < end and not (self.costmap and self.cost(1.0, 0.6) == 0 and self.cost(*GOAL[:2]) == 0):
+            rclpy.spin_once(self.node, timeout_sec=0.1)
+        self.assertTrue(self.costmap, "no global costmap")
+        print("global costmap start/goal cost:", self.cost(1.0, 0.6), self.cost(*GOAL[:2]),
+              "size", self.costmap[-1].info.width, self.costmap[-1].info.height)
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = "map"
         goal.pose.pose.position.x, goal.pose.pose.position.y = GOAL[0], GOAL[1]
@@ -87,6 +103,10 @@ class TestNav(unittest.TestCase):
                 rclpy.spin_once(self.node, timeout_sec=0.1)
         self.assertTrue(handle is not None and handle.accepted, "NavigateToPose goal never accepted")
         result = self.wait(handle.get_result_async(), 400.0)
+        if result is not None and result.status == GoalStatus.STATUS_ABORTED:   # one retry, as mission_node does
+            print("first NavigateToPose aborted, retrying once")
+            handle = self.wait(self.nav.send_goal_async(goal), 30.0)
+            result = self.wait(handle.get_result_async(), 400.0) if handle and handle.accepted else None
         self.assertIsNotNone(result, "NavigateToPose did not finish in time")
         o = self.odom[-1]
         ex, ey = o.pose.pose.position.x - GOAL[0], o.pose.pose.position.y - GOAL[1]
