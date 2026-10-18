@@ -1,14 +1,19 @@
-# forklift_sim (placeholder)
+# forklift_sim
 
-Gazebo Harmonic world of the 1:14 mini warehouse (EN-11, AI-01, plan B5). Only the static world exists so far:
+Full-system digital twin of the mini warehouse in **Gazebo Fortress** (`ros_gz`, the Gazebo paired with ROS 2
+Humble) — EN-11, AI-01, plan B5. Full description, run instructions, CI checks and known gaps:
+[docs/19-gazebo-sim.md](../../../../docs/19-gazebo-sim.md).
 
-- `worlds/warehouse.sdf` — **generated** by `scripts/generate_world.py` from the fleet server's
-  `code/backend/app/warehouse_map.yaml`: boundary walls (0.45 m, taller than the LiDAR, EN-07), racks R1/R2 as
-  0.15 m boxes, flat coloured patches for docks, staging, charging, walkway and keep-out zones. World frame = map frame.
-  Re-run after the map changes: `python scripts/generate_world.py` (a host test fails when the file is stale).
-- `launch/world.launch.py` — opens it with `ros_gz_sim` (not run yet).
+- `worlds/warehouse.sdf`, `maps/warehouse_sim.{pgm,yaml}` — **generated** by `scripts/generate_world.py` from
+  `code/backend/app/warehouse_map.yaml` (walls 0.45 m, racks, zone patches; occupancy map of walls + racks).
+  Re-run after the map changes; a host test fails when they are stale.
+- `urdf/forklift_gz.urdf.xacro` — `forklift_description`'s URDF + LiDAR, fork camera, IMU, velocity drive,
+  odometry and joint states.
+- `config/bridge.yaml` — ros_gz_bridge per robot (`ROBOT_ID` → fl1, fl2, …).
+- `launch/sim.launch.py` — headless gz server, 1–3 forklifts, bridges, optional `stack:=nav`.
+- `scripts/cmd_vel_relay.py` — `supervisor_bypass`: cmd_vel_nav → cmd_vel with a watchdog.
+- `test/launch/*.launch.py` — launch tests, only built with `-DFORKLIFT_SIM_TESTS=ON` (`.github/workflows/sim.yml`).
 
-Not done (plan B5): forklift model with LiDAR / camera / IMU sensors spawned from `forklift_description`,
-`ros_gz_bridge` config, an ESP32 stand-in (cmd_vel → wheel_odom, tof_ring, fork_state), and running Nav2 + mission
-against the fleet server with `simulated: false`. The docking policy itself is trained in the MuJoCo environment
-of `code/training`, not here.
+```bash
+ros2 launch forklift_sim sim.launch.py robots:=fl1,fl2,fl3 stack:=nav gui:=true
+```

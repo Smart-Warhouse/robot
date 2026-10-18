@@ -127,3 +127,24 @@ def test_text_files_use_lf_and_utf8():
         if b"\r\n" in raw:
             bad.append(f"{p.relative_to(SRC)}: CRLF")
     assert not bad, bad
+
+
+def _sequences(node, path=""):
+    if isinstance(node, dict):
+        for k, v in node.items():
+            yield from _sequences(v, f"{path}/{k}")
+    elif isinstance(node, list):
+        yield path, node
+        for i, v in enumerate(node):
+            yield from _sequences(v, f"{path}[{i}]")
+
+
+@pytest.mark.parametrize("path", [p for p in files("*.yaml") if "ros__parameters" in p.read_text(encoding="utf-8")],
+                         ids=lambda p: str(p.relative_to(SRC)))
+def test_parameter_lists_have_one_type(path):
+    """rcl rejects a parameter file whose list mixes ints and floats ("Sequence should be of same type"): the EKF's
+    process_noise_covariance did, and ekf_node aborted on its first start in the Gazebo twin (sim.yml run 1)."""
+    for where, seq in _sequences(yaml.safe_load(path.read_text(encoding="utf-8"))):
+        scalars = [v for v in seq if not isinstance(v, (dict, list))]
+        kinds = {"bool" if isinstance(v, bool) else type(v).__name__ for v in scalars}
+        assert len(kinds) <= 1, f"{where}: mixed {sorted(kinds)}"

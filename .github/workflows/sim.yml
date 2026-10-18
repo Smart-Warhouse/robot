@@ -59,7 +59,7 @@ jobs:
           cp -r build/forklift_sim/test_results "$SIM_ARTIFACTS/" 2>/dev/null || true
           cp -r log "$SIM_ARTIFACTS/colcon_log" 2>/dev/null || true
           cp -r ~/.ros/log "$SIM_ARTIFACTS/ros_log" 2>/dev/null || true
-          ls -laR "$SIM_ARTIFACTS" | head -100
+          find "$SIM_ARTIFACTS" -maxdepth 2 | sort | head -100 || true
       - if: always()
         uses: actions/upload-artifact@v4
         with:
