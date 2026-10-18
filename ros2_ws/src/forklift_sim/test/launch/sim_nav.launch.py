@@ -14,12 +14,15 @@ import launch
 import launch_testing.actions
 import pytest
 import rclpy
+import rclpy.time
 from action_msgs.msg import GoalStatus
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import ExecuteProcess, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from nav2_msgs.action import NavigateToPose
 from nav_msgs.msg import OccupancyGrid, Odometry
+from tf2_msgs.msg import TFMessage
+from tf2_ros import Buffer
 from rclpy.action import ActionClient
 from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
@@ -59,8 +62,15 @@ class TestNav(unittest.TestCase):
         cls.odom = []
         cls.node.create_subscription(Odometry, "/fl1/wheel_odom", cls.odom.append, qos_profile_sensor_data)
         cls.nav = ActionClient(cls.node, NavigateToPose, "/fl1/navigate_to_pose")
-        cls.costmap = []
-        latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        cls.costmap, cls.ekf = [], []
+        cls.node.create_subscription(Odometry, "/fl1/odometry/filtered", cls.ekf.append, 10)
+        latched = QoSProfile(depth=100, reliability=ReliabilityPolicy.RELIABLE,
+                             durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        cls.tf = Buffer()   # filled from the namespaced TF topics (a TransformListener would read /tf)
+        cls.node.create_subscription(TFMessage, "/fl1/tf",
+                                     lambda m: [cls.tf.set_transform(t, "sim") for t in m.transforms], 50)
+        cls.node.create_subscription(TFMessage, "/fl1/tf_static",
+                                     lambda m: [cls.tf.set_transform_static(t, "sim") for t in m.transforms], latched)
         cls.node.create_subscription(OccupancyGrid, "/fl1/global_costmap/costmap", cls.costmap.append, latched)
 
     @classmethod
@@ -80,6 +90,24 @@ class TestNav(unittest.TestCase):
         j = int((y - g.info.origin.position.y) / g.info.resolution)
         return g.data[j * g.info.width + i] if 0 <= i < g.info.width and 0 <= j < g.info.height else None
 
+    def diagnose(self):
+        """What the planner sees at the start: EKF pose, TF map -> base_link and the costmap under the footprint."""
+        if self.ekf:
+            p = self.ekf[-1].pose.pose.position
+            print(f"odometry/filtered: ({p.x:.3f}, {p.y:.3f}) yaw {yaw_of(self.ekf[-1]):.3f}")
+        else:
+            print("odometry/filtered: nothing received")
+        try:
+            t = self.tf.lookup_transform("map", "base_link", rclpy.time.Time())
+            print(f"TF map->base_link: ({t.transform.translation.x:.3f}, {t.transform.translation.y:.3f}) "
+                  f"qz {t.transform.rotation.z:.3f}")
+        except Exception as e:  # noqa: BLE001 - diagnostics only
+            print("TF map->base_link failed:", e)
+        if self.costmap:
+            worst = max((self.cost(1.0 + dx / 100, 0.6 + dy / 100) or 0, dx, dy)
+                        for dx in range(-32, 24, 2) for dy in range(-12, 13, 2))
+            print("max global cost in a 0.56 x 0.24 m box around the start footprint:", worst)
+
     def test_navigate_to_pose(self):
         self.assertTrue(self.nav.wait_for_server(timeout_sec=180.0), "navigate_to_pose action server missing")
         # the planner rejects a start/goal on unknown cells (allow_unknown: false): wait for the static map
@@ -87,6 +115,7 @@ class TestNav(unittest.TestCase):
         while time.monotonic() < end and not (self.costmap and self.cost(1.0, 0.6) == 0 and self.cost(*GOAL[:2]) == 0):
             rclpy.spin_once(self.node, timeout_sec=0.1)
         self.assertTrue(self.costmap, "no global costmap")
+        self.diagnose()
         print("global costmap start/goal cost:", self.cost(1.0, 0.6), self.cost(*GOAL[:2]),
               "size", self.costmap[-1].info.width, self.costmap[-1].info.height)
         goal = NavigateToPose.Goal()
@@ -103,7 +132,8 @@ class TestNav(unittest.TestCase):
                 rclpy.spin_once(self.node, timeout_sec=0.1)
         self.assertTrue(handle is not None and handle.accepted, "NavigateToPose goal never accepted")
         result = self.wait(handle.get_result_async(), 400.0)
-        if result is not None and result.status == GoalStatus.STATUS_ABORTED:   # one retry, as mission_node does
+        if result is not None and result.status == GoalStatus.STATUS_ABORTED:
+            self.diagnose()   # one retry, as mission_node does
             print("first NavigateToPose aborted, retrying once")
             handle = self.wait(self.nav.send_goal_async(goal), 30.0)
             result = self.wait(handle.get_result_async(), 400.0) if handle and handle.accepted else None
