@@ -56,7 +56,7 @@ git clone -b humble https://github.com/micro-ROS/micro-ROS-Agent.git src/externa
 git clone -b humble https://github.com/micro-ROS/micro_ros_msgs.git src/external/micro_ros_msgs
 git clone https://github.com/Slamtec/sllidar_ros2.git src/external/sllidar_ros2
 rosdep install --from-paths src --ignore-src -r -y     # Nav2, slam_toolbox, robot_localization, laser_filters, v4l2_camera…
-pip install "paho-mqtt>=2" onnxruntime                 # Jetson: onnxruntime-gpu wheel from the Jetson Zoo (TensorRT EP)
+pip install "numpy<2" "paho-mqtt>=2" onnxruntime      # numpy<2 keeps the system OpenCV/cv_bridge working; Jetson: onnxruntime-gpu wheel from the Jetson Zoo (TensorRT EP)
 colcon build --symlink-install
 source install/setup.bash
 ```
