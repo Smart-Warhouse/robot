@@ -65,7 +65,7 @@ class SafetyParams:
     tof_forward: list[str] = field(default_factory=lambda: ["front", "front_left", "front_right"])
     tof_reverse: list[str] = field(default_factory=lambda: ["rear"])
     tof_side: list[str] = field(default_factory=lambda: ["left", "right"])
-    docking_ignored_tof: list[str] = field(default_factory=lambda: ["front"])  # = firmware TOF_MASK_DOCKING_IGNORE
+    docking_ignored_tof: list[str] = field(default_factory=lambda: ["front", "front_left", "front_right"])  # = firmware TOF_MASK_DOCKING_IGNORE
     tof_slow_m: float = 0.40           # SF-02
     tof_stop_m: float = 0.15
     tof_slow_factor: float = 0.30

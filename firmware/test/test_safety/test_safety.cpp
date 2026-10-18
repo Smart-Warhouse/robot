@@ -343,16 +343,19 @@ void test_tof_stale_by_age() {
 
 // ---- SF-03 docking ----
 
-void test_docking_ignores_centre_sensor_and_caps_speed() {
+void test_docking_ignores_front_sensors_and_caps_speed() {
   Rig r;
   r.in.docking = true;
-  r.tof(cfg::TOF_FRONT, 0.03f);  // the pallet itself
+  // the pallet itself: under the forks and, near the entrance, at both corners (outer stringers / rack shelf)
+  r.tof(cfg::TOF_FRONT, 0.03f);
+  r.tof(cfg::TOF_FRONT_LEFT, 0.04f);
+  r.tof(cfg::TOF_FRONT_RIGHT, 0.04f);
   r.cmd(0.3f);
   r.run(1000);
   TEST_ASSERT_EQUAL(SafetyState::SLOW, r.out.state);
   TEST_ASSERT_FLOAT_WITHIN(1e-4f, cfg::DOCKING_MAX_MPS, r.out.v);
-  // A corner sensor still stops it.
-  r.tof(cfg::TOF_FRONT_RIGHT, 0.10f);
+  // Leaving docking mode with something that close in front → full stop again.
+  r.in.docking = false;
   r.run(1);
   TEST_ASSERT_EQUAL(SafetyState::STOP, r.out.state);
 }
@@ -490,7 +493,7 @@ int main(int, char**) {
   RUN_TEST(test_side_sensors_only_slow_while_turning);
   RUN_TEST(test_stale_leading_sensor_is_fail_safe_stop);
   RUN_TEST(test_tof_stale_by_age);
-  RUN_TEST(test_docking_ignores_centre_sensor_and_caps_speed);
+  RUN_TEST(test_docking_ignores_front_sensors_and_caps_speed);
   RUN_TEST(test_raised_forks_cap_speed);
   RUN_TEST(test_unknown_fork_height_counts_as_raised);
   RUN_TEST(test_tightest_cap_wins);

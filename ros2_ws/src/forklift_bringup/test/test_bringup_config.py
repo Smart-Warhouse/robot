@@ -20,6 +20,8 @@ NODE_SOURCES = {
     "fork_joint_state_publisher": ["forklift_description/scripts/fork_joint_state_publisher.py"],
     "aruco_node": ["forklift_perception/forklift_perception/aruco_node.py"],
     "initial_pose_node": ["forklift_perception/forklift_perception/initial_pose_node.py"],
+    "camera_stream": ["forklift_camera_stream/forklift_camera_stream/camera_stream_node.py",
+                      "forklift_camera_stream/forklift_camera_stream/mjpeg_core.py"],
     "dock_server": ["forklift_rl/forklift_rl/dock_node.py", "forklift_rl/forklift_rl/observation.py",
                     "forklift_rl/forklift_rl/docking_core.py"],
 }
@@ -63,7 +65,7 @@ def test_safety_values_match_requirements():
     s = CFG["/**/safety_supervisor"]["ros__parameters"]
     assert s["max_speed"] <= 0.3 and s["raised_speed"] <= 0.1 and s["docking_speed"] <= 0.1
     assert s["tof_slow_m"] == 0.4 and s["tof_stop_m"] == 0.15 and s["server_loss_timeout_s"] == 3.0
-    assert s["docking_ignored_tof"] == ["front"]
+    assert s["docking_ignored_tof"] == ["front", "front_left", "front_right"]
     m = CFG["/**/mission_node"]["ros__parameters"]
     assert m["state_hz"] == 2.0 and m["grant_retry_s"] == 0.5 and m["nav_attempts"] == 3
     assert m["travel_loaded_mm"] < s["raised_fork_mm"]
@@ -91,5 +93,5 @@ def test_launch_declares_one_namespace_per_robot():
     text = (PKG / "launch" / "bringup.launch.py").read_text(encoding="utf-8")
     assert "PushRosNamespace(ns)" in text and '"robot_id"' in text
     for exe in ("micro_ros_agent", "sllidar_node", "scan_to_scan_filter_chain", "safety_supervisor", "mission_node",
-                "dock_server", "fork_state_bridge", "aruco_node", "initial_pose_node", "lift_server"):
+                "dock_server", "fork_state_bridge", "aruco_node", "initial_pose_node", "lift_server", "camera_stream"):
         assert f'"{exe}"' in text, exe

@@ -61,7 +61,7 @@
     tof_forward: [front, front_left, front_right]
     tof_reverse: [rear]
     tof_side: [left, right]
-    docking_ignored_tof: [front]     # = firmware TOF_MASK_DOCKING_IGNORE
+    docking_ignored_tof: [front, front_left, front_right]   # = firmware TOF_MASK_DOCKING_IGNORE (corners see the pallet too)
     tof_slow_m: 0.4                  # SF-02
     tof_stop_m: 0.15
     tof_slow_factor: 0.3
@@ -149,6 +149,17 @@
       safety_stop_timeout_s: 3.0
       success_lateral_m: 0.02
       require_tcrt: true
+
+/**/camera_stream:
+  ros__parameters:                   # UI-08 manual-control camera: MJPEG on http://<robot>:8081/stream.mjpg
+    width: 320
+    height: 240
+    fps: 10.0
+    jpeg_quality: 60
+    port: 8081
+    max_clients: 2
+    always_on: false                 # true = stream outside manual mode too (bench only)
+    token_file: /etc/forklift/camera_token   # shared with the fleet server's CAMERA_TOKEN (chmod 600)
 
 /**/camera:
   ros__parameters:                   # v4l2_camera (USB / IMX219 via v4l2), JS-03: 640x480 @ 30 fps

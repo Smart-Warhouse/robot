@@ -75,17 +75,18 @@ def test_docking_source_wins_and_is_limited_sf03():
         o = s.step(t, DT)
         t += DT
     assert o.source == "dock" and o.docking and o.v == pytest.approx(0.10)
-    # the pallet right under the forks does not stop docking (centre sensor ignored, like the firmware) ...
+    # the pallet under the forks and at the corners does not stop docking (all front sensors ignored, like the
+    # firmware's TOF_MASK_DOCKING_IGNORE — the corners see the outer stringers near the entrance) ...
     for _ in range(5):
         feed(s, t, tof=[0.02, 2, 2, 2, 2, 2])
         s.set_cmd("dock", 0.1, 0.0, t)
         o = s.step(t, DT)
         t += DT
     assert o.state != STOP and o.v > 0
-    # ... the corners still stop while docking ...
-    feed(s, t, tof=[0.02, 0.05, 2, 2, 2, 2])
+    feed(s, t, tof=[0.02, 0.05, 0.05, 2, 2, 2])
     s.set_cmd("dock", 0.1, 0.0, t)
-    assert s.step(t, DT).state == STOP
+    o = s.step(t, DT)
+    assert o.state != STOP and o.v == pytest.approx(0.10)  # ... still capped at the docking speed ...
     # ... and the centre reading stops normal driving
     s2 = sup()
     o, _ = run(s2, 0.0, 0.5, tof=[0.10] + [2.0] * 5)

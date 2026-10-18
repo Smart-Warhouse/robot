@@ -21,6 +21,7 @@ on any machine; the rclpy nodes (`*_node.py`, `*_bridge.py`) are thin wrappers a
 | `forklift_mission` | ament_python | MQTT fleet client (docs/03) + Behavior-Tree mission executor, Lift action server, fake broker |
 | `forklift_rl` | ament_python | 18-dim observation, ONNX/TensorRT policy runner, classical fallback, `Dock` action server |
 | `forklift_sim` | ament_cmake | placeholder: Gazebo Harmonic world generated from `warehouse_map.yaml` |
+| `forklift_camera_stream` | ament_python | UI-08 low-res MJPEG of the fork camera (manual mode only), relayed by the server; `standalone` runs it on a laptop webcam / test pattern |
 
 `tools/mqtt_robot_client/` is the ROS-free reference robot client the fleet client was ported from (unchanged).
 

@@ -135,7 +135,7 @@ Type `help`. Without micro-ROS the console is on the USB port. Main commands:
 | Drive speed at 100 % PWM (feed-forward) | `DRIVE_SPEED_AT_FULL_DUTY` | 0.45 m/s |
 | Encoder gear ratio | `DRIVE_GEAR_RATIO` | 1 (magnet on the axle) |
 | Lift range, lift min duty | `LIFT_MAX_MM`, `LIFT_MIN_DUTY` | 120 mm, 0.20 |
-| ToF mux wiring, docking-ignore mask | `TOF_MUX_CHANNEL`, `TOF_MASK_DOCKING_IGNORE` | 0…5, centre sensor only |
+| ToF mux wiring, docking-ignore mask | `TOF_MUX_CHANNEL`, `TOF_MASK_DOCKING_IGNORE` | 0…5, all three front sensors (corners see the pallet in simulation — confirm on the real ring) |
 | INA219 shunt | `INA219_SHUNT_OHM` | 0.1 Ω reads only ±3.2 A; the ≈ 5 A peak needs a 0.01 Ω shunt |
 | Wheel radius, pot points, servo centre/gain | calibration defaults | 30 mm, raw 300/3800, 1500 µs, 900 µs/rad |
 | PID gains | `defaultDriveGains()`, `defaultLiftGains()` | tuned on plant models only |

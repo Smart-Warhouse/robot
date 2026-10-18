@@ -6,7 +6,7 @@
 Per namespace: robot_state_publisher (URDF, JS-06) + fork joint, micro-ROS agent (ESP32 over USB), sllidar_ros2 +
 laser_filters (PC-09), EKF + slam_toolbox (NV-01..NV-03), Nav2 (forklift_navigation), fork_state_bridge,
 safety_supervisor (SF-*), mission_node (MQTT fleet client + BT), lift_server, camera + aruco_node + initial_pose_node
-(PC-03..PC-05, NV-04), dock_server (AI-05/AI-06), optional rosbag recording (JS-08).
+(PC-03..PC-05, NV-04), camera_stream (UI-08), dock_server (AI-05/AI-06), optional rosbag recording (JS-08).
 /tf and /tf_static are remapped into the namespace, so several robots may share one ROS domain; giving each robot its
 own ROS_DOMAIN_ID (forklift.env) keeps the Wi-Fi quiet as well.
 """
@@ -81,6 +81,9 @@ def _setup(context):
         Node(package="forklift_mission", executable="lift_server", name="lift_server", parameters=[params, common]),
         Node(package="v4l2_camera", executable="v4l2_camera_node", name="camera", parameters=[params, common],
              condition=IfCondition(a["camera"])),
+        # UI-08: low-res MJPEG of the fork camera, served only in manual mode, relayed by the fleet server
+        Node(package="forklift_camera_stream", executable="camera_stream", name="camera_stream",
+             parameters=[params, common], condition=IfCondition(a["camera"])),
         Node(package="forklift_perception", executable="aruco_node", name="aruco_node", parameters=[params, common],
              remappings=TF, condition=IfCondition(a["camera"])),
         Node(package="forklift_perception", executable="initial_pose_node", name="initial_pose_node",

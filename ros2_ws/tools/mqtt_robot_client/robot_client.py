@@ -9,10 +9,14 @@ the server's MQTT bridge (app/fleet/mqtt_bridge.py) and as the template for the 
 Contract points implemented:
   * Last Will {"online": false} on wh/fl/{id}/state (CM-03); state at 2 Hz with seq + ts (CM-04)
   * wh/fl/{id}/task → task_status accepted, to_pickup, picking, to_drop, dropping, done | failed
-  * wh/traffic/{from}--{to}: request, wait for grant (re-request every 500 ms on deny), release on arrival
+  * wh/traffic/{from}--{to}: request, wait for grant (re-request every 500 ms on deny), release on arrival;
+    denied for --detour-after-s..2x (random) = re-plan the rest of the leg around that node, or back off to a free neighbour
+    (the server cannot re-route a real robot, so head-on waits between robots are broken here)
   * wh/fl/{id}/cmd pause/resume/cancel/go_charge/reset/mode, wh/fl/{id}/teleop in manual mode
   * retained wh/fleet/estop: hold still while engaged
-  * losing the broker = stop and go to SAFE; an operator `reset` is needed to continue (FW-08)
+  * idle for --home-after-s with no new task = drive back home (frees the rack/dock spur it stopped in)
+  * losing the broker = finish the current lane, stop, resume when the link is back (contract default);
+    --require-reset = go to SAFE instead and wait for an operator `reset` (FW-08)
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ import itertools
 import json
 import logging
 import math
+import random
 import signal
 import threading
 import time
@@ -57,15 +62,20 @@ class Forklift:
             self.adj[b].append(a)
         cfg = next((r for r in raw.get("robots", []) if r["id"] == args.id), {})
         self.id = args.id
-        self.home = args.start or cfg.get("home") or next(iter(self.nodes))
+        self.home = cfg.get("home") or args.start or next(iter(self.nodes))  # where it parks / charges
+        start = args.start or self.home
         self.speed_mps = args.speed
         self.action_s = args.action_s
         self.fail_pick = args.fail_pick
+        self.require_reset = args.require_reset
+        self.home_after_s = args.home_after_s
+        self.detour_after_s = args.detour_after_s
+        self.rng = random.Random()
 
         self.lock = threading.RLock()
-        self.x, self.y = self.nodes[self.home]
+        self.x, self.y = self.nodes[start]
         self.yaw = math.pi / 2
-        self.node: str | None = self.home
+        self.node: str | None = start
         self.speed = 0.0
         self.battery = 100.0
         self.fork_mm = 0.0
@@ -79,9 +89,11 @@ class Forklift:
         self.cancel = threading.Event()
         self.teleop = (0.0, 0.0, 0, 0.0)  # v, w, lift, monotonic time
         self.grants: dict[str, str] = {}  # segment -> last grant/deny answer for us
+        self.wanted: str | None = None  # the one segment we are requesting or driving
         self.grant_cv = threading.Condition(self.lock)
         self.mission: threading.Thread | None = None
         self.pending_task: dict | None = None
+        self.idle_since: float | None = time.monotonic()
         self.seq = itertools.count(1)
 
         self.c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"robot-{self.id}", clean_session=True)
@@ -113,9 +125,10 @@ class Forklift:
         self.connected.clear()
         with self.lock:
             self.speed = 0.0
-            if not self.stop.is_set() and self.mode not in ("safe", "error"):
+            if self.require_reset and not self.stop.is_set() and self.mode not in ("safe", "error"):
                 self.mode = "safe"  # FW-08: keep still until an operator resets us
-        log.warning("lost the broker (%s) — SAFE stop", reason_code)
+        log.warning("lost the broker (%s) — %s", reason_code,
+                    "SAFE stop" if self.require_reset else "finishing the lane, then waiting for the link")
 
     def _on_message(self, client, userdata, msg) -> None:
         try:
@@ -141,6 +154,9 @@ class Forklift:
                 with self.grant_cv:
                     self.grants[parts[2]] = body["action"]
                     self.grant_cv.notify_all()
+                    unwanted = body["action"] == "grant" and parts[2] != self.wanted
+                if unwanted:
+                    self._release_unwanted(parts[2])
         elif parts[-1] == "task":
             self._on_task(body)
         elif parts[-1] == "cmd":
@@ -168,6 +184,7 @@ class Forklift:
             if task is None:
                 return
             self.cancel.clear()
+            self.idle_since = None
             self.task_id = task["task_id"]
             if self.mode == "idle":
                 self.mode = "busy"
@@ -257,22 +274,97 @@ class Forklift:
                     self.task_id = None
                 if self.mode == "busy":
                     self.mode = "idle"
+                if self.pending_task is None:
+                    self.idle_since = time.monotonic()
             self.publish_state()
 
     def _follow(self, route: list[str]) -> None:
-        for nxt in route:
+        """Drive a leg lane by lane. The server cannot re-route a real robot, so waits are broken here: denied
+        for a while (random, so two robots do not give way together), try once more the planned lane, then a
+        detour round the blocked node, then any free neighbour; after stepping aside, linger so the other
+        robot can pass, and plan again from there."""
+        path = list(route)
+        goal = path[-1] if path else None
+        while path:
+            nxt = path[0]
             if nxt == self.node:
+                path.pop(0)
                 continue
-            if self.node is None or nxt not in self.adj[self.node]:
-                raise RuntimeError(f"route step {self.node} -> {nxt} is not a lane")
-            self._drive_lane(self.node, nxt)
+            here = self.node
+            if here is None or nxt not in self.adj[here]:
+                raise RuntimeError(f"route step {here} -> {nxt} is not a lane")
+            if self._wait_grant(f"{here}--{nxt}", give_up_s=self._detour_wait()):
+                self._drive_lane(here, nxt)
+                path.pop(0)
+                continue
+            options: list[tuple[str, list[str] | None]] = [(nxt, path)]
+            if nxt != goal:
+                alt = self._plan(here, goal, avoid={nxt})
+                if len(alt) > 1:
+                    options.append((alt[1], alt[1:]))
+            tried = {o[0] for o in options}
+            aside = sorted((n for n in self.adj[here] if n not in tried),
+                           key=lambda n: (len(self.adj[n]) == 1, self.rng.random()))  # lane nodes before spurs
+            options += [(n, None) for n in aside]
+            taken = next(((first, rest) for first, rest in options
+                          if self._request(f"{here}--{first}") == "grant"), None)
+            if taken is None:
+                continue  # every way out is held: keep asking for the planned lane
+            first, rest = taken
+            self._drive_lane(here, first)
+            if rest is None:
+                log.info("lane %s--%s blocked: stepped aside to %s", here, nxt, first)
+                self._linger(self.rng.uniform(1.0, 3.0))
+                path = self._plan(self.node, goal)
+            else:
+                if first != nxt:
+                    log.info("lane %s--%s blocked: detour %s", here, nxt, rest)
+                path = rest[1:]
+
+    def _detour_wait(self) -> float:
+        # random in [t, 2t] so two robots waiting on each other do not give way at the same moment
+        return self.rng.uniform(self.detour_after_s, 2 * self.detour_after_s)
+
+    def _linger(self, seconds: float) -> None:
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            self._hold()
+            time.sleep(STEP_S)
+
+    def _request(self, seg: str, timeout: float = 0.3) -> str | None:
+        """One request, one answer (grant / deny / None if none in `timeout`)."""
+        self._hold()
+        if not self.connected.is_set():
+            return None
+        with self.grant_cv:
+            self.grants.pop(seg, None)
+            self.wanted = seg
+        self.pub(f"wh/traffic/{seg}", {"robot_id": self.id, "action": "request"})
+        deadline = time.monotonic() + timeout
+        with self.grant_cv:
+            while seg not in self.grants and time.monotonic() < deadline:
+                self.grant_cv.wait(deadline - time.monotonic())
+            answer = self.grants.pop(seg, None)
+            if answer != "grant":
+                self.wanted = None  # a grant arriving later is handed back
+        return answer
+
+    def _release_unwanted(self, seg: str) -> None:
+        """A grant for a lane we no longer want (late answer): hand the lane and its far node back."""
+        a, _, b = seg.partition("--")
+        with self.lock:
+            here = self.node
+        # release {x}--{y} frees the lane and node x: give back the far node b unless we already stand on it
+        back = seg if here == b else f"{b}--{a}"
+        log.debug("unwanted grant %s: releasing %s", seg, back)
+        self.pub(f"wh/traffic/{back}", {"robot_id": self.id, "action": "release"})
 
     def _drive_to(self, goal: str) -> None:
         self._follow(self._plan(self.node, goal))
 
     def _drive_lane(self, a: str, b: str) -> None:
+        """Drive a granted lane. A lost link does not stop us mid-lane (contract: finish the lane, then wait)."""
         seg = f"{a}--{b}"
-        self._wait_grant(seg)
         (ax, ay), (bx, by) = self.nodes[a], self.nodes[b]
         length = math.hypot(bx - ax, by - ay)
         done = 0.0
@@ -281,7 +373,7 @@ class Forklift:
             self.node = None  # between nodes
         try:
             while done < length:
-                self._hold()
+                self._hold(link=False)
                 done = min(length, done + self.speed_mps * STEP_S)
                 with self.lock:
                     f = done / length if length else 1.0
@@ -296,16 +388,26 @@ class Forklift:
                 else:
                     self.node = a  # cancelled mid-lane: snap back logically (sim only)
                     self.x, self.y = ax, ay
+        with self.grant_cv:
+            self.wanted = None
         if done >= length:
             self.pub(f"wh/traffic/{seg}", {"robot_id": self.id, "action": "release"})
         else:
             self.pub(f"wh/traffic/{b}--{a}", {"robot_id": self.id, "action": "release"})
 
-    def _wait_grant(self, seg: str) -> None:
+    def _wait_grant(self, seg: str, give_up_s: float | None = None) -> bool:
+        """True once the server grants `seg`; False after being denied for `give_up_s` seconds."""
+        first_deny: float | None = None
         while True:
-            self._hold()
+            try:
+                self._hold()
+            except Cancelled:
+                with self.grant_cv:
+                    self.wanted = None
+                raise
             with self.grant_cv:
                 self.grants.pop(seg, None)
+                self.wanted = seg
             if self.connected.is_set():
                 self.pub(f"wh/traffic/{seg}", {"robot_id": self.id, "action": "request"})
             deadline = time.monotonic() + GRANT_RETRY_S
@@ -314,9 +416,14 @@ class Forklift:
                     self.grant_cv.wait(deadline - time.monotonic())
                 answer = self.grants.pop(seg, None)
             if answer == "grant":
-                return
+                return True
             if answer == "deny":
                 log.debug("lane %s denied — waiting", seg)
+                first_deny = first_deny or time.monotonic()
+                if give_up_s is not None and time.monotonic() - first_deny >= give_up_s:
+                    with self.grant_cv:
+                        self.wanted = None
+                    return False
                 time.sleep(max(0.0, deadline - time.monotonic()))
 
     def _dwell(self, seconds: float, fork_mm: float, yaw: float | None) -> None:
@@ -330,13 +437,14 @@ class Forklift:
             time.sleep(STEP_S)
             left -= STEP_S
 
-    def _hold(self) -> None:
-        """Block while we must not move (E-stop, pause, SAFE, broker lost); raise if cancelled."""
+    def _hold(self, link: bool = True) -> None:
+        """Block while we must not move (E-stop, pause, SAFE, broker lost if `link`); raise if cancelled."""
         while True:
             if self.cancel.is_set() or self.stop.is_set():
                 raise Cancelled()
             with self.lock:
-                blocked = self.estop or self.mode in ("paused", "safe", "error", "manual") or not self.connected.is_set()
+                blocked = (self.estop or self.mode in ("paused", "safe", "error", "manual")
+                           or (link and not self.connected.is_set()))
                 if blocked:
                     self.speed = 0.0
             if not blocked:
@@ -349,8 +457,8 @@ class Forklift:
         y = self.y if y is None else y
         return min(self.nodes, key=lambda n: math.hypot(self.nodes[n][0] - x, self.nodes[n][1] - y))
 
-    def _plan(self, start: str | None, goal: str) -> list[str]:
-        """Plain BFS-by-distance (Dijkstra) fallback when the task route does not cover a leg."""
+    def _plan(self, start: str | None, goal: str, avoid: set[str] = frozenset()) -> list[str]:
+        """Dijkstra on the lane graph (legs the task route does not cover, detours); [] if `avoid` cuts it off."""
         import heapq
 
         start = start or self._nearest_node()
@@ -360,11 +468,15 @@ class Forklift:
             if n == goal:
                 break
             for nb in self.adj[n]:
+                if nb in avoid or (nb != goal and len(self.adj[nb]) == 1):  # spurs only as the goal
+                    continue
                 nd = d + math.dist(self.nodes[n], self.nodes[nb])
                 if nd < dist.get(nb, math.inf):
                     dist[nb], prev[nb] = nd, n
                     heapq.heappush(pq, (nd, nb))
         if goal not in dist:
+            if avoid:
+                return []
             raise RuntimeError(f"no route {start} -> {goal}")
         path = [goal]
         while path[-1] != start:
@@ -399,6 +511,32 @@ class Forklift:
             self.fork_mm = min(120.0, max(0.0, self.fork_mm + lift * 30.0 * STEP_S))
             self.speed = v
 
+    def _maybe_go_home(self) -> None:
+        """Idle away from home for `home_after_s`: drive home (still reporting idle, a new task cancels it)."""
+        with self.lock:
+            if (self.home_after_s < 0 or self.idle_since is None or self.mode != "idle" or self.estop
+                    or self.node in (None, self.home) or self.pending_task is not None
+                    or (self.mission and self.mission.is_alive())
+                    or time.monotonic() - self.idle_since < self.home_after_s):
+                return
+            self.idle_since = None
+            self.cancel.clear()
+            self.mission = threading.Thread(target=self._return_home, daemon=True)
+            self.mission.start()
+
+    def _return_home(self) -> None:
+        try:
+            self._drive_to(self.home)
+        except Cancelled:
+            pass
+        except Exception as exc:
+            log.error("return home failed: %s", exc)
+        finally:
+            with self.lock:
+                if self.pending_task is None and self.task_id is None:
+                    self.idle_since = time.monotonic()
+            self.publish_state()
+
     def run(self) -> None:
         self.c.connect_async(self.host, self.port, keepalive=5)
         self.c.loop_start()
@@ -406,6 +544,7 @@ class Forklift:
         try:
             while not self.stop.is_set():
                 self._manual_step()
+                self._maybe_go_home()
                 if time.monotonic() >= next_state:
                     next_state = time.monotonic() + 1.0 / STATE_HZ
                     self.publish_state()
@@ -430,6 +569,12 @@ def main() -> None:
     ap.add_argument("--speed", type=float, default=0.5, help="driving speed, m/s")
     ap.add_argument("--action-s", type=float, default=2.0, help="seconds per pick / drop")
     ap.add_argument("--fail-pick", action="store_true", help="report every pickup as failed")
+    ap.add_argument("--home-after-s", type=float, default=2.0,
+                    help="idle this long away from home = drive home (negative: stay where the task ended)")
+    ap.add_argument("--detour-after-s", type=float, default=2.0,
+                    help="denied a lane for t..2t s (random) = take a detour or back off (default 2)")
+    ap.add_argument("--require-reset", action="store_true",
+                    help="after losing the broker, stay in SAFE until an operator reset (default: resume)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,

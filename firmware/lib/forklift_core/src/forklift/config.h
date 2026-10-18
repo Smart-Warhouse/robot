@@ -126,9 +126,12 @@ constexpr uint8_t TOF_MUX_CHANNEL[TOF_COUNT] = {0, 1, 2, 3, 4, 5};  // PLACEHOLD
 constexpr uint8_t TOF_MASK_FRONT = (1u << TOF_FRONT) | (1u << TOF_FRONT_LEFT) | (1u << TOF_FRONT_RIGHT);
 constexpr uint8_t TOF_MASK_REAR = (1u << TOF_REAR);
 constexpr uint8_t TOF_MASK_SIDES = (1u << TOF_LEFT) | (1u << TOF_RIGHT);
-// SF-03: while docking only the front sensors that see the pallet itself are ignored. PLACEHOLDER: the
-// centre sensor under the forks; add the corners if they also see the pallet on the real forklift.
-constexpr uint8_t TOF_MASK_DOCKING_IGNORE = (1u << TOF_FRONT);
+// SF-03: while docking, the front sensors that see the pallet itself are ignored. In the docking simulator the
+// two corner sensors also see the pallet's outer stringers (or the rack shelf) once the fork tips are ~4 cm in, so
+// ignoring only the centre one stopped 99.5 % of dockings (code/training/models/docking_v3/safety_eval.json). All
+// three are ignored; the 0.1 m/s docking cap, the side/rear sensors and person detection stay active.
+// Re-check on the real ToF ring (T-06/T-12): if a corner never sees the pallet, drop it from this mask.
+constexpr uint8_t TOF_MASK_DOCKING_IGNORE = (1u << TOF_FRONT) | (1u << TOF_FRONT_LEFT) | (1u << TOF_FRONT_RIGHT);
 constexpr uint32_t TOF_TIMING_BUDGET_US = 20000;  // 50 Hz per sensor (§4)
 
 // ---------------------------------------------------------------------------------------------------

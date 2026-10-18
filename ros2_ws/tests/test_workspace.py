@@ -17,6 +17,7 @@ WS = Path(__file__).resolve().parents[1]
 SRC = WS / "src"
 PACKAGES = sorted(p.parent for p in SRC.glob("*/package.xml"))
 EXPECTED = {"forklift_description", "forklift_interfaces", "forklift_bringup", "forklift_navigation",
+            "forklift_camera_stream",
             "forklift_perception", "forklift_safety", "forklift_mission", "forklift_rl", "forklift_sim"}
 SKIP_DIRS = {"__pycache__", ".pytest_cache"}
 ROS_MODULES = {"rclpy", "launch", "launch_ros", "ament_index_python", "tf2_ros", "cv_bridge", "nav2_common",

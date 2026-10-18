@@ -1,0 +1,196 @@
+# Every dimension of the printed mounts (requirements §2, ME-04 … ME-12). Units: millimetres and degrees.
+#
+# ONLY the Huina 1577 Pro outer size (52.4 × 18.7 × 31.7 cm) is a real number. Everything marked PLACEHOLDER is
+# a design guess from photos / typical datasheets and must be measured with calipers after the forklift is
+# opened (ME-01) and the parts arrive. Values shared with code/training/forklift_rl/config.yaml (metres there)
+# are kept equal: wheelbase, fork size and spacing, mast height, lift range, pallet size.
+#
+# After measuring: change the value here, run `python build.py`, re-run `pytest`, print. Nothing else to edit.
+
+printer:
+  bed: [220, 220, 250]        # X, Y, Z build volume (Ender-3 class)
+  nozzle: 0.4
+  layer: 0.2
+
+material:
+  default: PETG                # PETG for everything near the Jetson, motors and battery (PLA softens ~55 °C)
+  min_wall: 1.6                # 4 perimeters at 0.4 mm
+  clearance_slide: 0.30        # part slides onto a part (fork sleeve, mast clamp)
+  clearance_press: 0.15        # press fit (magnet, E-Stop key)
+  clearance_board: 0.40        # PCB pockets (board edges are rough)
+
+screws:                         # clearance holes = nominal + 0.4 (PLA/PETG shrink holes ~0.2 mm)
+  m2: {clear: 2.4, pilot: 1.8, head: 4.2, nut_af: 4.2, insert: 3.2}
+  m2_5: {clear: 2.9, pilot: 2.2, head: 5.0, nut_af: 5.2, insert: 3.6}
+  m3: {clear: 3.4, pilot: 2.6, head: 6.0, nut_af: 5.7, insert: 4.0, insert_depth: 5.0}
+
+# ----------------------------------------------------------------------------------------------------------
+# Forklift (Huina 1577 Pro). x forward (forks), y left, z up, origin on the floor under the front axle.
+# ----------------------------------------------------------------------------------------------------------
+forklift:
+  length: 524                  # REAL, outer incl. forks
+  width: 187                   # REAL
+  height: 317                  # REAL, top of the mast (= mast_height in the RL config, 0.317 m)
+  mast_height: 317             # PLACEHOLDER = height; the mast is the highest point in the photo
+  mast_rise_at_max_lift: 0     # PLACEHOLDER: how far the inner mast rises above mast_height at full lift
+  overhead_guard_top: 245      # PLACEHOLDER: top of the guard roof above the floor
+  guard_bar_width: 8           # PLACEHOLDER: roof bar width (the LiDAR base clamps onto the bars)
+  guard_bar_pitch: 30          # PLACEHOLDER: centre distance of the roof bars
+  guard_roof_size: [120, 110]  # PLACEHOLDER: roof length × width
+  wheelbase: 200               # PLACEHOLDER = RL config 0.20 m
+  carriage_backrest_height: 70 # PLACEHOLDER: fork carriage backrest above the fork top
+  carriage_bar_thickness: 6    # PLACEHOLDER: carriage cross bar the camera clamp grips
+  carriage_bar_height: 12      # PLACEHOLDER
+  fork_length: 180             # RL config 0.18 m
+  fork_width: 35               # RL config 0.035 m
+  fork_thickness: 12           # RL config 0.012 m
+  fork_spacing: 90             # RL config 0.09 m, centre to centre
+  fork_clearance: 4            # RL config: fork bottom above floor at lift 0
+  lift_max: 120                # RL config 0.12 m and firmware LIFT_MAX_MM (PLACEHOLDER)
+  mast_rail_width: 14          # PLACEHOLDER: outer mast upright (channel) width the pot bracket clamps
+  mast_rail_depth: 10          # PLACEHOLDER
+  drive_axle_diameter: 4.0     # PLACEHOLDER: axle stub the AS5600 magnet cap presses onto
+  drive_axle_flat: 0.5         # PLACEHOLDER: D-flat depth (0 = round axle)
+  axle_end_to_mount_face: 12   # PLACEHOLDER: axle end → chassis face the AS5600 bracket screws to (along the axle)
+  rear_cover_inner: [150, 160, 75]   # PLACEHOLDER: space behind the seat under the yellow cover (L × W × H)
+  rear_floor_height: 25        # PLACEHOLDER: chassis floor at the counterweight above ground
+
+pallet:                         # RL config pallet: 200 × 200 × 35, deck 8 mm
+  height: 35
+  deck_thickness: 8
+  load_height: 40              # PLACEHOLDER: tallest load carried on a pallet (demo box)
+
+# ----------------------------------------------------------------------------------------------------------
+# Bought parts (datasheet values marked PLACEHOLDER: check the actual board you received)
+# ----------------------------------------------------------------------------------------------------------
+lidar:                          # SLAMTEC RPLIDAR C1
+  body: [55.6, 55.6, 41.3]     # datasheet L × W × H
+  scan_plane_above_base: 27    # PLACEHOLDER: optical window centre above the mounting face
+  hole_spacing: [40, 40]       # PLACEHOLDER: bottom M2.5 holes (check the C1 drawing)
+  screw: m2_5
+  min_clearance_above_obstacles: 15   # scan plane this far above the highest mast / load point
+  base_plate: [80, 80, 4]      # clamps on the guard roof: 4 × M3 through-bolts + 4 zip-tie slots
+  base_hole_spacing: 60
+  riser_outer: 40              # square hollow riser (cable inside)
+  riser_wall: 3
+  top_plate: [60, 60, 4]
+  cable_hole: 16
+  cable_slot: [14, 10]         # USB cable exits the riser side at the bottom
+
+camera:                         # Raspberry Pi Camera Module 3 (Wide)
+  board: [25, 24, 1.0]         # datasheet
+  hole_spacing: [21, 12.5]     # datasheet, M2
+  hole_offset_from_bottom: 2.0 # lower hole row centre above the bottom edge (datasheet)
+  tilt_deg: 20                 # ME-05: 15–25° down
+  tilt_min_deg: 15
+  tilt_max_deg: 25
+  height_above_fork_top: 45    # PLACEHOLDER: lens above the fork top (sees pallet openings + marker)
+  standoff: 3                  # board above the plate (ribbon connector and SMD parts on the back)
+  plate_thickness: 2.5
+  clamp_width: 30              # along the carriage bar
+  clamp_wall: 3.0
+  arm_thickness: 4.0
+
+tof:                            # VL53L1X breakout (the ardunic purple board), 6 per forklift
+  board: [13, 18, 1.6]         # PLACEHOLDER: board W × H × T (Pololu-size); measure yours
+  holes: [[-4.4, 6.0], [4.4, 6.0]]   # PLACEHOLDER: M2 hole centres from the board centre (x, y)
+  standoff: 3                  # board above the bracket face (SMD parts on the back)
+  base_thickness: 2.5
+  flange: 8                    # screw wings left / right of the block (2 × M2 into the body)
+  # mount: yaw of the sensor axis relative to the face the bracket sits on, pitch up (+) / down (-)
+  positions:                   # ME-06, order = firmware TofIndex (config.h) and mux channel 0…5
+    front:       {yaw: 0, pitch: 5, note: "under the forks, centre of the carriage"}
+    front_left:  {yaw: 45, pitch: 0, note: "front-left body corner"}
+    front_right: {yaw: -45, pitch: 0, note: "front-right body corner"}
+    left:        {yaw: 0, pitch: 0, note: "left side, mid-body"}
+    right:       {yaw: 0, pitch: 0, note: "right side, mid-body"}
+    rear:        {yaw: 0, pitch: 0, note: "rear counterweight, centre"}
+
+jetson:                         # NVIDIA Jetson Orin Nano Super Developer Kit
+  footprint: [103, 90.5]       # datasheet (with heatsink overhang)
+  height: 35                   # datasheet incl. fan
+  hole_spacing: [86, 58]       # PLACEHOLDER: carrier board M2.5 holes (Xavier-NX form factor) — measure
+  hole_offset: [6.5, 6.5]      # PLACEHOLDER: hole centre from the board corner
+  standoff: 6
+  screw: m2_5
+  power_w: 15                  # 15 W mode (MAXN blocked, requirements §3)
+  ports_side: x_min            # USB / Ethernet / DC jack face this box wall
+
+electronics:                    # second bay next to the Jetson: ESP32-S3 Zero + drivers on a perfboard
+  perfboard: [50, 70]          # PLACEHOLDER: 5 × 7 cm perfboard (EL-10 first prototype)
+  perfboard_holes_inset: 2.5
+  perfboard_screw: m2
+  standoff: 6
+
+ebox:                           # ME-10
+  wall: 2.0
+  floor: 2.0
+  inner_height: 50             # Jetson 35 + standoff 6 + air above the fan
+  gap: 4                       # air / cables around the boards
+  vent_slot: [3, 22]           # slot width × length
+  vent_pitch: 6
+  min_vent_area_mm2: 1500      # ≥ 100 mm² per W of Jetson power, see test_ebox_ventilation
+  lid_thickness: 2.0
+  cable_port: [24, 14]         # rear port: battery, motors, sensors
+  port_window: [86, 24]        # PLACEHOLDER: Jetson rear I/O (USB, Ethernet, DC jack, DP) cut-out W × H
+  mount_ears: 4                # M3 ears to the chassis
+
+battery:                        # 4 × 18650 2S2P in the 4-slot ABS holder (BOM #20)
+  holder: [77, 84, 21]         # PLACEHOLDER: L × W × H of the 4-slot holder (cells side by side)
+  bms: [45, 16, 4]             # PLACEHOLDER: 2S 20A BMS board
+  tray_wall: 2.0
+  tray_floor: 2.0
+  strap_slot: [22, 3]          # Velcro strap slot (20 mm strap)
+  lip_height: 12               # side walls hold the holder; the strap holds it down
+  finger_notch: 25             # notch to pull the holder out for charging (ME-11)
+
+estop:                          # 22 mm E-Stop XB2-BS542 (ME-12)
+  hole: 22.3                   # 22 mm + clearance
+  key_width: 3.2               # anti-rotation tab on the bushing
+  key_depth: 1.6
+  panel_thickness: 3.0         # XB2 clamps 1–6 mm
+  body_below_panel: [42, 42, 48]   # PLACEHOLDER: contact block envelope under the panel (W × D × H)
+  wall: 2.4
+  base_flange: 10
+
+as5600:                         # ME-07: 6 mm diametric magnet on the drive axle, AS5600 board facing it
+  magnet: [6.0, 2.5]           # diameter × thickness (the kit magnet)
+  board: [23, 23, 1.6]         # PLACEHOLDER: round-corner AS5600 board
+  board_holes: [[-8.0, -8.0], [8.0, -8.0]]  # PLACEHOLDER: M2 holes from the chip centre
+  chip_height: 1.0             # SOIC-8 top above the board
+  gap: 1.5                     # magnet face → chip face, ME-07 asks 0.5–3
+  gap_min: 0.5
+  gap_max: 3.0
+  cap_wall: 1.6
+  cap_depth_on_axle: 6         # cap length over the axle
+  cap_web: 1.0                 # wall between the axle end and the magnet
+  axle_height_above_mount_face: 14  # PLACEHOLDER: axle centre above the chassis face the bracket foot sits on
+  plate_thickness: 3.0
+  foot_length: 22
+  slot_travel: 2.5             # foot slots let the gap be set anywhere in 0.5–3 mm
+
+mast_sensors:                   # ME-08: slide pot along the mast + top / bottom limit switches
+  pot_body: [90, 20, 9]        # PLACEHOLDER: slide pot module L × W × H (ardunic red board)
+  pot_travel: 60               # PLACEHOLDER: knob travel; must cover lift_max (see the test warning)
+  pot_holes: [[-41, 0], [41, 0]]   # PLACEHOLDER: M2 hole centres from the module centre
+  limit_switch: [20, 10, 6.4]  # micro roller switch body
+  limit_holes_spacing: 9.5     # 2 × M2
+  pot_knob: [4.0, 8.0]         # PLACEHOLDER: knob stem W × H the slider link grips
+  plate_thickness: 3.0
+  clamp_screw: m3
+
+tcrt:                           # ME-09: bare TCRT5000 head in a nose clip on each fork tip, facing up
+  head: [10.2, 5.8, 7.0]       # datasheet body L × W × H (leads bent back into the channel)
+  sleeve_wall: 1.2             # top / bottom skin over the fork (fits the pallet opening, see test)
+  sleeve_length: 20
+  nose_length: 14              # clip extends the fork by this much
+  wire_channel: [3.0, 2.0]     # under-side channel for the 4 leads
+  pallet_opening_margin: 2.0   # fork + clip must clear the pallet opening by this much
+
+# Where each part sits on the forklift (for the assembly preview and the clearance tests). PLACEHOLDER.
+placement:
+  lidar_base: [-40, 0]         # x, y of the LiDAR centre on the guard roof
+  ebox_origin: [-180, 0, 30]   # box centre x, y and floor z (behind the seat)
+  battery_origin: [-230, 0, 25]
+  estop_origin: [-250, 50, 150]
+  camera_x: 20                 # carriage front face

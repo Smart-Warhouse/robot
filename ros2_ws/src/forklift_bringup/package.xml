@@ -27,6 +27,7 @@
   <exec_depend>forklift_safety</exec_depend>
   <exec_depend>forklift_mission</exec_depend>
   <exec_depend>forklift_rl</exec_depend>
+  <exec_depend>forklift_camera_stream</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
