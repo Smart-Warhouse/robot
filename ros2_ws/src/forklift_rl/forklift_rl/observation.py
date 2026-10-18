@@ -1,5 +1,5 @@
 """The 18-dim docking observation, built from robot measurements exactly like the training simulator
-(`code/training/forklift_rl/env.py`, `ForkliftDockingEnv._obs`) — pure NumPy, no ROS.
+(`ai/training/forklift_rl/env.py`, `ForkliftDockingEnv._obs`) — pure NumPy, no ROS.
 
   0-1  pallet face centre in the fork-carriage frame (dx / 0.6, dy / 0.15), from the ArUco estimate (PC-04/05)
   2-3  sin / cos of the pallet yaw relative to the forklift
@@ -12,7 +12,7 @@
   14-16 previous action
   17   time left in the episode: 1 - steps / max_steps
 Action (3, [-1, 1]): linear speed x v_max, rear steering angle x steer_max, lift rate x lift_rate.
-Constants come from forklift_bringup/config/docking.yaml, which must equal code/training/forklift_rl/config.yaml.
+Constants come from forklift_bringup/config/docking.yaml, which must equal ai/training/forklift_rl/config.yaml.
 """
 
 from __future__ import annotations

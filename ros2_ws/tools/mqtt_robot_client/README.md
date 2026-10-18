@@ -1,8 +1,8 @@
 # Reference MQTT forklift client (no ROS)
 
 `robot_client.py` plays one real forklift against the server's MQTT bridge, implementing
-[`docs/03-mqtt-contract.md`](../../../../docs/03-mqtt-contract.md) from the robot side. It drives the lane graph
-from `code/backend/app/warehouse_map.yaml` at a fixed speed and fakes pick/drop as timed dwells. It is the template
+[`docs/03-mqtt-contract.md`](https://github.com/Smart-Warhouse/docs/blob/main/03-mqtt-contract.md) from the robot side. It drives the lane graph
+from `backend/app/warehouse_map.yaml` at a fixed speed and fakes pick/drop as timed dwells. It is the template
 for the `forklift_mission` fleet client; swap the "drive a lane" and "dwell" parts for Nav2 / fork actions.
 
 ```bash
@@ -32,7 +32,7 @@ What it does:
 
 ## End-to-end check
 
-1. Broker: `docker compose up mqtt` in `code/backend` (needs `mosquitto/passwd`, see the backend README), or any
+1. Broker: `docker compose up mqtt` in `backend` (needs `mosquitto/passwd`, see the backend README), or any
    local broker on 1883.
 2. Set `simulated: false` for `fl1` in `warehouse_map.yaml` (or point `MAP_FILE` at a copy) and start the backend
    with `MQTT_ENABLED=true MQTT_USERNAME=server MQTT_PASSWORD=...`. `/api/health` must say `"mqtt": "connected"`.
@@ -42,5 +42,5 @@ What it does:
 5. Kill the client (`taskkill /F` / `kill -9`): the broker publishes the will and fl1 goes offline at once; a task
    not yet lifted returns to the queue.
 
-The same check runs automatically against Mosquitto with passwords + the ACL in `code/integration`
-(see [`docs/17-integration-tests.md`](../../../../docs/17-integration-tests.md)).
+The same check runs automatically against Mosquitto with passwords + the ACL in `backend/integration`
+(see [`docs/17-integration-tests.md`](https://github.com/Smart-Warhouse/docs/blob/main/17-integration-tests.md)).

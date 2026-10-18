@@ -2,9 +2,9 @@
 checked against the exact 18-dim observation the policy was trained on.
 
 Run with the *training* environment (it needs MuJoCo), from anywhere:
-    code/training/.venv/Scripts/python code/ros2_ws/src/forklift_rl/tools/dump_env_observations.py
-Writes code/ros2_ws/src/forklift_rl/test/data/env_obs_samples.json (committed; regenerate after changing
-code/training/forklift_rl/env.py or config.yaml).
+    ai/training/.venv/Scripts/python robot/ros2_ws/src/forklift_rl/tools/dump_env_observations.py
+Writes robot/ros2_ws/src/forklift_rl/test/data/env_obs_samples.json (committed; regenerate after changing
+ai/training/forklift_rl/env.py or config.yaml).
 """
 
 from __future__ import annotations
@@ -12,12 +12,13 @@ from __future__ import annotations
 import json
 import math
 import sys
+import os
 from pathlib import Path
 
 import numpy as np
 
 HERE = Path(__file__).resolve()
-TRAINING = HERE.parents[4] / "training"
+TRAINING = (Path(os.environ["SW_WORKSPACE"]) if os.environ.get("SW_WORKSPACE") else HERE.parents[5]) / "ai" / "training"
 OUT = HERE.parents[1] / "test" / "data" / "env_obs_samples.json"
 sys.path.insert(0, str(TRAINING))
 

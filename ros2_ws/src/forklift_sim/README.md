@@ -2,10 +2,10 @@
 
 Full-system digital twin of the mini warehouse in **Gazebo Fortress** (`ros_gz`, the Gazebo paired with ROS 2
 Humble) — EN-11, AI-01, plan B5. Full description, run instructions, CI checks and known gaps:
-[docs/19-gazebo-sim.md](../../../../docs/19-gazebo-sim.md).
+[docs/19-gazebo-sim.md](https://github.com/Smart-Warhouse/docs/blob/main/19-gazebo-sim.md).
 
 - `worlds/warehouse.sdf`, `maps/warehouse_sim.{pgm,yaml}` — **generated** by `scripts/generate_world.py` from
-  `code/backend/app/warehouse_map.yaml` (walls 0.45 m, racks, zone patches; occupancy map of walls + racks).
+  `backend/app/warehouse_map.yaml` (walls 0.45 m, racks, zone patches; occupancy map of walls + racks).
   Re-run after the map changes; a host test fails when they are stale.
 - `urdf/forklift_gz.urdf.xacro` — `forklift_description`'s URDF + LiDAR, fork camera, IMU, velocity drive,
   odometry and joint states.

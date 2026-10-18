@@ -1,6 +1,6 @@
 """Lane graph from the server's warehouse_map.yaml (SV-02, NV-09) — pure Python, no ROS.
 
-The fleet server owns the map (`code/backend/app/warehouse_map.yaml`); forklift_bringup installs a copy of that
+The fleet server owns the map (`backend/app/warehouse_map.yaml`); forklift_bringup installs a copy of that
 file at build time so robot and server always plan on the same graph. Segment ids on `wh/traffic/{segment}` are
 `<from>--<to>` in the direction of travel (docs/03-mqtt-contract.md); node ids may contain a single dash (R1-W1).
 """

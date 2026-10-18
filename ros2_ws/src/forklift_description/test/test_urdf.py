@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import math
 import xml.etree.ElementTree as ET
+import os
 from pathlib import Path
 
 import pytest
@@ -59,7 +60,8 @@ def test_lift_joint_matches_dimensions(urdf):
 
 def test_dimensions_match_training_config():
     """The URDF and the RL simulator must describe the same forklift (else the policy sees a different robot)."""
-    train = PKG.parents[2] / "training" / "forklift_rl" / "config.yaml"
+    ws = Path(os.environ["SW_WORKSPACE"]) if os.environ.get("SW_WORKSPACE") else PKG.parents[3]
+    train = ws / "ai" / "training" / "forklift_rl" / "config.yaml"  # ai repo next to the robot repo
     if not train.exists():
         pytest.skip("training config not present")
     t = yaml.safe_load(train.read_text(encoding="utf-8"))["forklift"]

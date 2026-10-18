@@ -1,7 +1,7 @@
 # CAD — printed mounts for the forklift (CadQuery)
 
 Parametric 3D-printed parts for requirements §2 (ME-04 … ME-12). What each part is, how it is fitted, the
-wiring and the parts still to buy: [docs/14-hardware-build.md](../../docs/14-hardware-build.md).
+wiring and the parts still to buy: [docs/14-hardware-build.md](https://github.com/Smart-Warhouse/docs/blob/main/14-hardware-build.md).
 
 ```
 params.yaml      EVERY dimension (mm). Only the Huina 1577 Pro outer size is real; the rest is PLACEHOLDER (ME-01)
@@ -19,7 +19,7 @@ py -3.11 -m venv .venv
 ```
 
 After measuring the forklift: edit `params.yaml` → `build.py` → `pytest` → slice `out/stl/*.stl` (PETG,
-0.2 mm, 4 perimeters, 30 % gyroid). Values shared with `code/training/forklift_rl/config.yaml` (wheelbase,
+0.2 mm, 4 perimeters, 30 % gyroid). Values shared with `ai/training/forklift_rl/config.yaml` (wheelbase,
 fork size/spacing, mast height, lift range, pallet) and `LIFT_MAX_MM` in the firmware must be changed in all
 places together — `test_params_match_rl_config` / `test_params_match_firmware_lift_range` fail otherwise.
 

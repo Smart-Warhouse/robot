@@ -1,0 +1,92 @@
+name: ci
+# Repos of the Smart-Warhouse org live side by side in one workspace folder (docs/ backend/ dashboard/ landing/
+# mobile/ robot/ ai/). Jobs that need a sibling check it out next to this repo, so relative lookups work as on a laptop.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: firmware } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('firmware/platformio.ini') }}
+      - run: pip install platformio
+      - run: pio test -e native          # lib/forklift_core: safety, kinematics, PID, IMU (host gcc)
+      - run: pio run -e esp32s3          # board build without micro-ROS
+
+  cad:
+    # one test compares with the ai repo's training config
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: robot/cad } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: robot }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/ai, path: ai }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            robot/cad/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+
+  ros2-host-tests:
+    # rclpy-free cores; contract tests read docs (MQTT schemas), backend (lane graph) and ai (docking config, policy)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: robot/ros2_ws } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: robot }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/backend, path: backend }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/docs, path: docs }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/ai, path: ai }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            robot/ros2_ws/requirements-host.txt
+      - run: pip install -r requirements-host.txt
+      - run: python -m pytest -q
+
+  ros2-colcon-build:
+    runs-on: ubuntu-22.04
+    container: ros:humble
+    defaults:
+      run:
+        shell: bash
+        working-directory: robot/ros2_ws
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: robot }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/backend, path: backend }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/docs, path: docs }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/ai, path: ai }
+      - run: apt-get update && rosdep update
+      # sllidar_ros2 and micro_ros_agent are built from source on the robot (not in rosdep), see ros2_ws/README.md
+      - run: rosdep install --from-paths src --ignore-src -y --rosdistro humble --skip-keys "sllidar_ros2 micro_ros_agent"
+      # numpy<2: Ubuntu 22.04 python3-opencv is built against NumPy 1
+      - run: apt-get install -y python3-pip && pip3 install "numpy<2" "paho-mqtt>=2" onnx onnxruntime jsonschema
+      - run: source /opt/ros/humble/setup.bash && colcon build --event-handlers console_direct+
+      - run: source /opt/ros/humble/setup.bash && colcon test && colcon test-result --verbose

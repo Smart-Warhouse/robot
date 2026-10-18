@@ -1,9 +1,9 @@
 # ROS 2 Humble workspace — forklift Jetson software
 
 Everything one autonomous 1:14 forklift runs on its Jetson Orin Nano (JetPack 6 = Ubuntu 22.04, ROS 2 Humble),
-next to the ESP32-S3 firmware (`code/firmware`) and supervised by the fleet server (`code/backend`) over MQTT
-([docs/03-mqtt-contract.md](../../docs/03-mqtt-contract.md)). Design, requirement mapping and the per-robot
-node/topic graph: [docs/13-ros2.md](../../docs/13-ros2.md).
+next to the ESP32-S3 firmware (`robot/firmware`) and supervised by the fleet server (`backend`) over MQTT
+([docs/03-mqtt-contract.md](https://github.com/Smart-Warhouse/docs/blob/main/03-mqtt-contract.md)). Design, requirement mapping and the per-robot
+node/topic graph: [docs/13-ros2.md](https://github.com/Smart-Warhouse/docs/blob/main/13-ros2.md).
 
 All real logic is in plain Python modules without rclpy (`*_core.py`, `bt.py`, `lane_graph.py`, …) and is unit-tested
 on any machine; the rclpy nodes (`*_node.py`, `*_bridge.py`) are thin wrappers around them.
@@ -20,7 +20,7 @@ on any machine; the rclpy nodes (`*_node.py`, `*_bridge.py`) are thin wrappers a
 | `forklift_safety` | ament_python | safety supervisor (clamps Nav2 / RL / gamepad → `cmd_vel`, heartbeat, `safety_reset`), `fork_state_bridge` |
 | `forklift_mission` | ament_python | MQTT fleet client (docs/03) + Behavior-Tree mission executor, Lift action server, fake broker |
 | `forklift_rl` | ament_python | 18-dim observation, ONNX/TensorRT policy runner, classical fallback, `Dock` action server |
-| `forklift_sim` | ament_cmake | Gazebo Fortress digital twin: generated world + map, sim URDF, bridge, `sim.launch.py` ([docs/19](../../docs/19-gazebo-sim.md)) |
+| `forklift_sim` | ament_cmake | Gazebo Fortress digital twin: generated world + map, sim URDF, bridge, `sim.launch.py` ([docs/19](https://github.com/Smart-Warhouse/docs/blob/main/19-gazebo-sim.md)) |
 | `forklift_camera_stream` | ament_python | UI-08 low-res MJPEG of the fork camera (manual mode only), relayed by the server; `standalone` runs it on a laptop webcam / test pattern |
 
 `tools/mqtt_robot_client/` is the ROS-free reference robot client the fleet client was ported from (unchanged).
@@ -28,7 +28,7 @@ on any machine; the rclpy nodes (`*_node.py`, `*_bridge.py`) are thin wrappers a
 ## Host tests (Windows, macOS, Linux — no ROS needed)
 
 ```powershell
-cd code/ros2_ws
+cd robot/ros2_ws
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements-host.txt     # Linux/macOS: .venv/bin/python
 .venv/Scripts/python -m pytest -q                                # src/ + tests/ (pytest.ini)
@@ -44,14 +44,14 @@ XML/YAML parses, every Python file compiles, cores import no ROS, LF + UTF-8).
 
 Optional: `MQTT_TEST_HOST=<broker> MQTT_TEST_USER=fl1 MQTT_TEST_PASSWORD=…` also runs the paho transport against a
 real Mosquitto. `src/forklift_rl/tools/dump_env_observations.py` regenerates the simulator fixture (run it with the
-training venv after changing `code/training/forklift_rl/env.py` or `config.yaml`).
+training venv after changing `ai/training/forklift_rl/env.py` or `config.yaml`).
 
 ## Build on Ubuntu 22.04 + ROS 2 Humble (Jetson or laptop)
 
 ```bash
 sudo apt install python3-rosdep python3-colcon-common-extensions python3-pip
 sudo rosdep init; rosdep update
-cd ~/grad-project/code/ros2_ws
+cd ~/smart-warhouse/robot/ros2_ws
 # not in rosdep for Humble: build from source in this workspace (or apt if your mirror has them)
 git clone -b humble https://github.com/micro-ROS/micro-ROS-Agent.git src/external/micro-ROS-Agent
 git clone -b humble https://github.com/micro-ROS/micro_ros_msgs.git src/external/micro_ros_msgs
@@ -77,8 +77,8 @@ Autostart (JS-07): copy `src/forklift_bringup/systemd/forklift.service` to `/etc
 `sudo systemctl enable --now forklift`. A fourth forklift = a new `robots:` entry in the server map and a new env
 file (NFR-09).
 
-The docking policy is expected at `code/training/models/docking_v3/policy.onnx` (exported by
-`code/training/scripts/export_onnx.py`); override with `model_path:=` or `FORKLIFT_POLICY`. Without it the Dock
+The docking policy is expected at `ai/training/models/docking_v3/policy.onnx` (exported by
+`ai/training/scripts/export_onnx.py`); override with `model_path:=` or `FORKLIFT_POLICY`. Without it the Dock
 server falls back to the classical controller and logs an error.
 
 ## Regenerated files
@@ -89,4 +89,4 @@ server falls back to the classical controller and logs an error.
 | `src/forklift_sim/worlds/warehouse.sdf`, `src/forklift_sim/maps/warehouse_sim.*` | `src/forklift_sim/scripts/generate_world.py` |
 | `src/forklift_rl/test/data/env_obs_samples.json` | `src/forklift_rl/tools/dump_env_observations.py` (training venv) |
 
-Host tests fail when the first two are stale with respect to `code/backend/app/warehouse_map.yaml`.
+Host tests fail when the first two are stale with respect to `backend/app/warehouse_map.yaml`.

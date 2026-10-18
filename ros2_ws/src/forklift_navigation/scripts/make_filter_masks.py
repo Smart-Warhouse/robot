@@ -12,12 +12,14 @@ same origin, so masks and SLAM map line up. Pure Python (no numpy) so it runs an
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import yaml
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_MAP = HERE.parents[3] / "backend" / "app" / "warehouse_map.yaml"
+WORKSPACE = Path(os.environ["SW_WORKSPACE"]) if os.environ.get("SW_WORKSPACE") else HERE.parents[4]  # holds the robot and backend repos
+DEFAULT_MAP = WORKSPACE / "backend" / "app" / "warehouse_map.yaml"
 DEFAULT_OUT = HERE.parent / "maps"
 KEEPOUT_KINDS = ("keepout", "pedestrian")
 SPEED_ZONES = {"charge": 50, "staging": 50, "dock_in": 50, "dock_out": 50}  # percent of the maximum speed

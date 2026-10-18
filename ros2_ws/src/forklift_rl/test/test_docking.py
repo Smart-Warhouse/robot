@@ -3,6 +3,7 @@ episode closes the loop on a kinematic model of the forklift."""
 
 import json
 import math
+import os
 from pathlib import Path
 
 import numpy as np
@@ -16,14 +17,14 @@ from forklift_rl.policy import ClassicalPolicy, OnnxPolicy
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parents[1]
-REPO = SRC.parents[2]
+REPO = Path(os.environ["SW_WORKSPACE"]) if os.environ.get("SW_WORKSPACE") else SRC.parents[2]  # the workspace that holds the robot and ai repos
 FIXTURE = json.loads((HERE / "data" / "env_obs_samples.json").read_text())
 CFG = DockingConfig.from_training(FIXTURE["config"])
 
 
 # ---------------------------------------------------------------------- observation == simulator
 def test_observation_matches_training_env_exactly():
-    """718 states recorded from code/training/forklift_rl/env.py (tools/dump_env_observations.py), including
+    """718 states recorded from ai/training/forklift_rl/env.py (tools/dump_env_observations.py), including
     marker-not-visible and forks-inserted (TCRT) states."""
     assert len(FIXTURE["samples"]) > 500
     assert any(not s["visible"] for s in FIXTURE["samples"]) and any(s["tcrt_lr"][0] for s in FIXTURE["samples"])
@@ -49,7 +50,7 @@ def test_observation_before_first_sighting():
 
 def test_bringup_docking_config_equals_training_config():
     """JS-05 keeps the robot's copy in forklift_bringup; it must not drift from what the policy was trained with."""
-    train_file = REPO / "code" / "training" / "forklift_rl" / "config.yaml"
+    train_file = REPO / "ai" / "training" / "forklift_rl" / "config.yaml"
     if not train_file.exists():
         pytest.skip("training config not present")
     train = DockingConfig.from_training(yaml.safe_load(train_file.read_text(encoding="utf-8")))
@@ -121,8 +122,8 @@ def test_onnx_policy_rejects_wrong_input_size_and_missing_file(tmp_path):
 
 
 def test_real_exported_policy_if_present():
-    """code/training/models/docking_v3/policy.onnx is produced by the training track; only checked when present."""
-    model = REPO / "code" / "training" / "models" / "docking_v3" / "policy.onnx"
+    """ai repo training/models/docking_v3/policy.onnx is produced by the training track; only checked when present."""
+    model = REPO / "ai" / "training" / "models" / "docking_v3" / "policy.onnx"
     if not model.exists():
         pytest.skip("docking_v3/policy.onnx not exported yet")
     pol = OnnxPolicy(model)

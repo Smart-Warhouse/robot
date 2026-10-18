@@ -1,6 +1,6 @@
 """Robot side of the robot <-> server MQTT contract (docs/03-mqtt-contract.md, docs/schemas/*.json) — no ROS.
 
-Ported from the proven reference client `code/ros2_ws/tools/mqtt_robot_client/robot_client.py`, restructured as a
+Ported from the proven reference client `robot/ros2_ws/tools/mqtt_robot_client/robot_client.py`, restructured as a
 single-threaded, tick-driven core with an injectable `Transport` and clock so it can be unit-tested against
 `fake_broker.FakeBroker`:
 

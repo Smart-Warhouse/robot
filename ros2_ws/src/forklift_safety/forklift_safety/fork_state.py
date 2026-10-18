@@ -1,4 +1,4 @@
-"""Decode the ESP32 `fork_state` std_msgs/Float32MultiArray (code/firmware/src/microros_node.cpp) — no ROS.
+"""Decode the ESP32 `fork_state` std_msgs/Float32MultiArray (robot/firmware/src/microros_node.cpp) — no ROS.
 
     data = [height_mm (NaN = pot unreadable), limit_top, limit_bottom, tcrt_left, tcrt_right, at_target]
 Flags are 0.0 / 1.0. Temporary until the firmware publishes forklift_interfaces/ForkState (see ForkState.msg).

@@ -4,6 +4,7 @@ colcon/ROS (`.venv/Scripts/python -m pytest -q`). Nothing here imports rclpy."""
 from __future__ import annotations
 
 import sys
+import os
 from pathlib import Path
 
 WS = Path(__file__).resolve().parent
@@ -13,8 +14,9 @@ for pkg in sorted((WS / "src").iterdir()):
 
 import pytest  # noqa: E402
 
-REPO = WS.parents[1]
-WAREHOUSE_MAP = REPO / "code" / "backend" / "app" / "warehouse_map.yaml"
+# the workspace folder that holds the repos side by side (robot/, backend/, docs/, ai/ ...); override with SW_WORKSPACE
+REPO = Path(os.environ["SW_WORKSPACE"]) if os.environ.get("SW_WORKSPACE") else WS.parents[1]
+WAREHOUSE_MAP = REPO / "backend" / "app" / "warehouse_map.yaml"
 SCHEMAS = REPO / "docs" / "schemas"
 
 
@@ -25,7 +27,7 @@ def ws_root() -> Path:
 
 @pytest.fixture(scope="session")
 def warehouse_map_path() -> Path:
-    """The single source of truth for the lane graph (read-only; owned by code/backend)."""
+    """The single source of truth for the lane graph (read-only; owned by backend)."""
     assert WAREHOUSE_MAP.exists(), WAREHOUSE_MAP
     return WAREHOUSE_MAP
 

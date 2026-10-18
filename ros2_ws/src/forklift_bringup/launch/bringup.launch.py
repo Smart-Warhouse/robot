@@ -26,10 +26,12 @@ TF = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
 
 def default_model_path() -> str:
-    """<repo>/code/training/models/docking_v3/policy.onnx relative to <repo>/code/ros2_ws/install/forklift_bringup/
-    share/forklift_bringup (colcon isolated install). Override with model_path:= or FORKLIFT_POLICY."""
+    """<workspace>/ai/training/models/docking_v3/policy.onnx, the workspace being the folder that holds the robot and
+    ai repos (robot/ros2_ws/install/forklift_bringup/share/forklift_bringup is 6 levels below it; override with
+    SW_WORKSPACE). Override the file itself with model_path:= or FORKLIFT_POLICY."""
     share = get_package_share_directory("forklift_bringup")
-    guess = os.path.normpath(os.path.join(share, *[".."] * 5, "training", "models", "docking_v3", "policy.onnx"))
+    ws = os.environ.get("SW_WORKSPACE") or os.path.join(share, *[".."] * 6)
+    guess = os.path.normpath(os.path.join(ws, "ai", "training", "models", "docking_v3", "policy.onnx"))
     return os.environ.get("FORKLIFT_POLICY", guess)
 
 
@@ -57,7 +59,7 @@ def _setup(context):
              parameters=[{"robot_description": urdf, **common}], remappings=TF),
         Node(package="forklift_description", executable="fork_joint_state_publisher.py",
              name="fork_joint_state_publisher", parameters=[params, common], remappings=TF),
-        # ESP32-S3 over native USB CDC (code/firmware): its node "esp32" uses namespace robot_id from NVS (FW-12)
+        # ESP32-S3 over native USB CDC (robot/firmware): its node "esp32" uses namespace robot_id from NVS (FW-12)
         Node(package="micro_ros_agent", executable="micro_ros_agent", name="micro_ros_agent", output="screen",
              arguments=["serial", "--dev", a["serial_port"], "-b", a["serial_baud"]]),
         Node(package="sllidar_ros2", executable="sllidar_node", name="sllidar_node", output="screen",
@@ -118,7 +120,7 @@ def generate_launch_description():
         DeclareLaunchArgument("params_file", default_value=os.path.join(share, "config", "forklift.yaml")),
         DeclareLaunchArgument("sensors_file", default_value=os.path.join(share, "config", "sensors.yaml")),
         DeclareLaunchArgument("warehouse_map", default_value=os.path.join(share, "config", "warehouse_map.yaml"),
-                              description="installed copy of code/backend/app/warehouse_map.yaml"),
+                              description="installed copy of backend/app/warehouse_map.yaml"),
         DeclareLaunchArgument("mqtt_host", default_value=os.environ.get("MQTT_HOST", ""),
                               description="override mission_node mqtt.host"),
         OpaqueFunction(function=_setup),

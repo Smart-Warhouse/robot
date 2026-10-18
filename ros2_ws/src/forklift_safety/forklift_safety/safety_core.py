@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 NORMAL, SLOW, STOP, SAFE, ESTOP = range(5)
 STATE_NAMES = ("normal", "slow", "stop", "safe", "estop")
 
-# ESP32 `safety_state` (std_msgs/UInt8) exactly as code/firmware publishes it (docs/12-firmware.md §3):
+# ESP32 `safety_state` (std_msgs/UInt8) exactly as robot/firmware publishes it (docs/12-firmware.md §3):
 #   byte = state << 4 | reason; states 0 BOOT 1 IDLE 2 ACTIVE 3 SLOW 4 STOP 5 SAFE 6 ESTOP.
 ESP_BOOT, ESP_IDLE, ESP_ACTIVE, ESP_SLOW, ESP_STOP, ESP_SAFE, ESP_ESTOP = range(7)
 ESP_STATE_MAP = {ESP_BOOT: STOP, ESP_IDLE: NORMAL, ESP_ACTIVE: NORMAL, ESP_SLOW: SLOW, ESP_STOP: STOP,

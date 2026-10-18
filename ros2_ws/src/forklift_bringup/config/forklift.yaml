@@ -116,7 +116,7 @@
 
 /**/dock_server:
   ros__parameters:
-    # model_path is set by bringup.launch.py (default code/training/models/docking_v3/policy.onnx)
+    # model_path is set by bringup.launch.py (default ai/training/models/docking_v3/policy.onnx)
     controller: rl                   # rl | classical (AI-07 comparison)
     providers: [TensorrtExecutionProvider, CUDAExecutionProvider, CPUExecutionProvider]
     fp16: true                       # AI-05: TensorRT FP16
@@ -126,7 +126,7 @@
     carriage_x: 0.03
     tof_lcr_indices: [1, 0, 2]       # policy ToF (left corner, centre, right corner) <- tof_ring indices
     fork_state_topic: fork_state/typed
-    docking:                         # MUST equal code/training/forklift_rl/config.yaml (test_docking.py checks it)
+    docking:                         # MUST equal ai/training/forklift_rl/config.yaml (test_docking.py checks it)
       wheelbase: 0.2
       fork_length: 0.18
       fork_thickness: 0.012

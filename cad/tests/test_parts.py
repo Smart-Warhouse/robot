@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 import re
 import warnings
+import os
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,7 @@ import yaml
 
 import parts
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(os.environ["SW_WORKSPACE"]) if os.environ.get("SW_WORKSPACE") else Path(__file__).resolve().parents[3]  # workspace with robot/ and ai/
 P = parts.load_params()
 
 
@@ -106,7 +107,7 @@ def test_camera_tilt_follows_parameter(tilt):
 # ME-06: six ToF brackets, same order as the firmware
 # ------------------------------------------------------------------------------------------------------------
 def test_tof_positions_match_firmware_order():
-    cfg = (ROOT / "code/firmware/lib/forklift_core/src/forklift/config.h").read_text(encoding="utf-8")
+    cfg = (ROOT / "robot/firmware/lib/forklift_core/src/forklift/config.h").read_text(encoding="utf-8")
     enum = re.search(r"enum TofIndex[^{]*\{(.*?)\};", cfg, re.S).group(1)
     names = [m.lower() for m in re.findall(r"TOF_([A-Z_]+)\s*=\s*\d", enum) if m != "COUNT"]
     assert names == parts.TOF_NAMES == list(P["tof"]["positions"])
@@ -218,7 +219,7 @@ def test_estop_panel_in_switch_clamp_range():
 # params shared with the RL simulator stay equal (config.yaml is in metres)
 # ------------------------------------------------------------------------------------------------------------
 def test_params_match_rl_config():
-    rl = yaml.safe_load((ROOT / "code/training/forklift_rl/config.yaml").read_text(encoding="utf-8"))
+    rl = yaml.safe_load((ROOT / "ai/training/forklift_rl/config.yaml").read_text(encoding="utf-8"))
     f, pal = P["forklift"], P["pallet"]
     pairs = {
         "wheelbase": (f["wheelbase"], rl["forklift"]["wheelbase"]),
@@ -238,6 +239,6 @@ def test_params_match_rl_config():
 
 
 def test_params_match_firmware_lift_range():
-    cfg = (ROOT / "code/firmware/lib/forklift_core/src/forklift/config.h").read_text(encoding="utf-8")
+    cfg = (ROOT / "robot/firmware/lib/forklift_core/src/forklift/config.h").read_text(encoding="utf-8")
     lift = float(re.search(r"LIFT_MAX_MM\s*=\s*([\d.]+)f", cfg).group(1))
     assert P["forklift"]["lift_max"] == pytest.approx(lift)

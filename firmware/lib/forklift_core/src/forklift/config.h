@@ -79,7 +79,7 @@ constexpr int STATUS_CORE = 0, STATUS_PRIO = 5, STATUS_HZ = 10;
 constexpr uint32_t SAFETY_STALE_MS = 5;  // motor task brakes if the safety output is older than this
 
 // ---------------------------------------------------------------------------------------------------
-// Geometry and drive — PLACEHOLDER until ME-01 (same placeholders as code/training/forklift_rl/config.yaml)
+// Geometry and drive — PLACEHOLDER until ME-01 (same placeholders as ai/training/forklift_rl/config.yaml)
 // ---------------------------------------------------------------------------------------------------
 constexpr float WHEELBASE_M = 0.20f;          // PLACEHOLDER front (drive) axle → rear (steer) axle
 constexpr float MAX_STEER_RAD = 0.5236f;      // PLACEHOLDER 30°
@@ -128,7 +128,7 @@ constexpr uint8_t TOF_MASK_REAR = (1u << TOF_REAR);
 constexpr uint8_t TOF_MASK_SIDES = (1u << TOF_LEFT) | (1u << TOF_RIGHT);
 // SF-03: while docking, the front sensors that see the pallet itself are ignored. In the docking simulator the
 // two corner sensors also see the pallet's outer stringers (or the rack shelf) once the fork tips are ~4 cm in, so
-// ignoring only the centre one stopped 99.5 % of dockings (code/training/models/docking_v3/safety_eval.json). All
+// ignoring only the centre one stopped 99.5 % of dockings (ai/training/models/docking_v3/safety_eval.json). All
 // three are ignored; the 0.1 m/s docking cap, the side/rear sensors and person detection stay active.
 // Re-check on the real ToF ring (T-06/T-12): if a corner never sees the pallet, drop it from this mask.
 constexpr uint8_t TOF_MASK_DOCKING_IGNORE = (1u << TOF_FRONT) | (1u << TOF_FRONT_LEFT) | (1u << TOF_FRONT_RIGHT);

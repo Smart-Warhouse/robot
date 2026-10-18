@@ -1,6 +1,6 @@
 # Forklift geometry for the URDF (JS-06, PC-02). Units: metres, radians.
 # PLACEHOLDER values until the first forklift is opened and measured (ME-01, plan.md A2). Keep in sync with
-# code/training/forklift_rl/config.yaml (`forklift:` block) and forklift_bringup/config/forklift.yaml (`footprint`);
+# ai/training/forklift_rl/config.yaml (`forklift:` block) and forklift_bringup/config/forklift.yaml (`footprint`);
 # src/forklift_mission/test/test_footprint.py checks the Nav2 footprint against this file.
 # base_link = centre of the front (drive, non-steered) axle projected on the floor; x forward (towards the forks).
 

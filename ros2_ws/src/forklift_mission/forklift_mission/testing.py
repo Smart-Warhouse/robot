@@ -1,5 +1,5 @@
 """Test doubles for the mission core: a fake clock, scripted robot capabilities and a fake fleet server that
-speaks the server side of docs/03 (lane locks like code/backend/app/fleet/traffic.py). Used by the host tests
+speaks the server side of docs/03 (lane locks like backend/app/fleet/traffic.py). Used by the host tests
 and handy for dry runs without hardware."""
 
 from __future__ import annotations
@@ -184,7 +184,7 @@ class FakeFleetServer:
 
 def make_task(graph, task_id: str, pick_loc: str, drop_loc: str, start_node: str, pallet_id: int = 7,
               with_route: bool = True) -> dict:
-    """A task message as code/backend/app/fleet/manager.py builds it (from/to carry the extension `node`)."""
+    """A task message as backend/app/fleet/manager.py builds it (from/to carry the extension `node`)."""
     f, t = graph.locations[pick_loc], graph.locations[drop_loc]
     route = (graph.plan(start_node, f.node) + graph.plan(f.node, t.node)[1:]) if with_route else []
 

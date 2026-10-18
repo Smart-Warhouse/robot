@@ -1,9 +1,9 @@
 """Docking policies behind one interface `act(obs[18]) -> action[3]` (AI-05).
 
-  * `OnnxPolicy`  — the exported actor (code/training/scripts/export_onnx.py: input `obs` float32 [N, 18], output
+  * `OnnxPolicy`  — the exported actor (ai/training/scripts/export_onnx.py: input `obs` float32 [N, 18], output
     `action` float32 [N, 3] in [-1, 1]) on onnxruntime; TensorRT / CUDA execution providers are used when the
     Jetson build of onnxruntime-gpu offers them (TensorRT FP16 target <= 5 ms), else CPU.
-  * `ClassicalPolicy` — the visual-servoing baseline (AI-07 reference), port of code/training/forklift_rl/baseline.py.
+  * `ClassicalPolicy` — the visual-servoing baseline (AI-07 reference), port of ai/training/forklift_rl/baseline.py.
 """
 
 from __future__ import annotations

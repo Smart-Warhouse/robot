@@ -2,8 +2,8 @@
 
 Firmware for the autonomous 1:14 forklift (modified Huina 1577 Pro). One binary for every forklift; the
 identity (`robot_id`) and the calibration live in NVS. Requirements §3, §4, §9 and §10 of
-[system-requirements.md](../../docs/00-sources/system-requirements.md); design notes and the requirement
-mapping in [docs/12-firmware.md](../../docs/12-firmware.md).
+[system-requirements.md](https://github.com/Smart-Warhouse/docs/blob/main/00-sources/system-requirements.md); design notes and the requirement
+mapping in [docs/12-firmware.md](https://github.com/Smart-Warhouse/docs/blob/main/12-firmware.md).
 
 ```
 lib/forklift_core/      hardware-independent logic, pure C++17 (no Arduino headers) — unit-tested on the host
@@ -29,7 +29,7 @@ test/                   Unity tests run on the host (`pio test -e native`)
 PlatformIO lives in a local venv (no global install needed):
 
 ```powershell
-cd code/firmware
+cd robot/firmware
 python -m venv .venv
 .venv\Scripts\pip install platformio
 
@@ -57,7 +57,7 @@ Linux or WSL2 (WSL2 Ubuntu 22.04 is planned anyway for ROS 2, plan B3):
 
 ```bash
 sudo apt install -y git cmake python3-venv python3-pip build-essential
-cd ~ && cp -r "/mnt/c/Users/ASUS/Desktop/Grad. Project/code/firmware" fw && cd fw   # path without spaces
+cd ~ && cp -r "/mnt/c/Users/ASUS/Desktop/Smart-Warhouse/robot/firmware" fw && cd fw   # path without spaces
 python3 -m venv .venv && .venv/bin/pip install platformio
 .venv/bin/pio run -e esp32s3_microros                 # first run builds micro-ROS humble (~10–20 min)
 .venv/bin/pio run -e esp32s3_microros -t upload --upload-port /dev/ttyACM0

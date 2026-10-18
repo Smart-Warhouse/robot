@@ -2,7 +2,7 @@
 #
 # ONLY the Huina 1577 Pro outer size (52.4 × 18.7 × 31.7 cm) is a real number. Everything marked PLACEHOLDER is
 # a design guess from photos / typical datasheets and must be measured with calipers after the forklift is
-# opened (ME-01) and the parts arrive. Values shared with code/training/forklift_rl/config.yaml (metres there)
+# opened (ME-01) and the parts arrive. Values shared with ai/training/forklift_rl/config.yaml (metres there)
 # are kept equal: wheelbase, fork size and spacing, mast height, lift range, pallet size.
 #
 # After measuring: change the value here, run `python build.py`, re-run `pytest`, print. Nothing else to edit.

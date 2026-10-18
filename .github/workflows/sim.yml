@@ -1,20 +1,18 @@
 # Full-system digital twin (AI-01, EN-11, plan B5): Gazebo Fortress + ROS 2 Humble, headless under Xvfb with Mesa
 # software rendering (the LiDAR and the camera are rendered sensors). Runs the launch tests of forklift_sim:
 # sensor rates + scripted drive, and a Nav2 NavigateToPose goal; uploads the rosbag, sensor rates and logs.
-# See docs/19-gazebo-sim.md.
+# See https://github.com/Smart-Warhouse/docs/blob/main/19-gazebo-sim.md. The lane graph comes from the backend repo.
 name: sim
 
 on:
   push:
-    branches: [main, sim-ci]
+    branches: [main]
     paths:
-      - "code/ros2_ws/**"
-      - "code/backend/app/warehouse_map.yaml"
+      - "ros2_ws/**"
       - ".github/workflows/sim.yml"
   pull_request:
     paths:
-      - "code/ros2_ws/**"
-      - "code/backend/app/warehouse_map.yaml"
+      - "ros2_ws/**"
       - ".github/workflows/sim.yml"
   workflow_dispatch:
 
@@ -36,9 +34,16 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: code/ros2_ws
+        working-directory: robot/ros2_ws
     steps:
       - uses: actions/checkout@v4
+        with: { path: robot }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/backend, path: backend }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/docs, path: docs }
+      - uses: actions/checkout@v4
+        with: { repository: Smart-Warhouse/ai, path: ai }
       - run: apt-get update && rosdep update
       - run: apt-get install -y xvfb mesa-utils ros-humble-ros-gz
       # sllidar_ros2 and micro_ros_agent are built from source on the robot (not in rosdep), as in ci.yml
