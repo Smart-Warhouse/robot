@@ -20,7 +20,7 @@ on any machine; the rclpy nodes (`*_node.py`, `*_bridge.py`) are thin wrappers a
 | `forklift_safety` | ament_python | safety supervisor (clamps Nav2 / RL / gamepad → `cmd_vel`, heartbeat, `safety_reset`), `fork_state_bridge` |
 | `forklift_mission` | ament_python | MQTT fleet client (docs/03) + Behavior-Tree mission executor, Lift action server, fake broker |
 | `forklift_rl` | ament_python | 18-dim observation, ONNX/TensorRT policy runner, classical fallback, `Dock` action server |
-| `forklift_sim` | ament_cmake | placeholder: Gazebo Harmonic world generated from `warehouse_map.yaml` |
+| `forklift_sim` | ament_cmake | Gazebo Fortress digital twin: generated world + map, sim URDF, bridge, `sim.launch.py` ([docs/19](../../docs/19-gazebo-sim.md)) |
 | `forklift_camera_stream` | ament_python | UI-08 low-res MJPEG of the fork camera (manual mode only), relayed by the server; `standalone` runs it on a laptop webcam / test pattern |
 
 `tools/mqtt_robot_client/` is the ROS-free reference robot client the fleet client was ported from (unchanged).
@@ -86,7 +86,7 @@ server falls back to the classical controller and logs an error.
 | File | Generator |
 |---|---|
 | `src/forklift_navigation/maps/{keepout,speed}_mask.*` | `src/forklift_navigation/scripts/make_filter_masks.py` |
-| `src/forklift_sim/worlds/warehouse.sdf` | `src/forklift_sim/scripts/generate_world.py` |
+| `src/forklift_sim/worlds/warehouse.sdf`, `src/forklift_sim/maps/warehouse_sim.*` | `src/forklift_sim/scripts/generate_world.py` |
 | `src/forklift_rl/test/data/env_obs_samples.json` | `src/forklift_rl/tools/dump_env_observations.py` (training venv) |
 
 Host tests fail when the first two are stale with respect to `code/backend/app/warehouse_map.yaml`.

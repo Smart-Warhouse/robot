@@ -1,0 +1,68 @@
+# Full-system digital twin (AI-01, EN-11, plan B5): Gazebo Fortress + ROS 2 Humble, headless under Xvfb with Mesa
+# software rendering (the LiDAR and the camera are rendered sensors). Runs the launch tests of forklift_sim:
+# sensor rates + scripted drive, and a Nav2 NavigateToPose goal; uploads the rosbag, sensor rates and logs.
+# See docs/19-gazebo-sim.md.
+name: sim
+
+on:
+  push:
+    branches: [main, sim-ci]
+    paths:
+      - "code/ros2_ws/**"
+      - "code/backend/app/warehouse_map.yaml"
+      - ".github/workflows/sim.yml"
+  pull_request:
+    paths:
+      - "code/ros2_ws/**"
+      - "code/backend/app/warehouse_map.yaml"
+      - ".github/workflows/sim.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gazebo-twin:
+    runs-on: ubuntu-22.04
+    container: ros:humble
+    timeout-minutes: 60
+    env:
+      SIM_ARTIFACTS: /tmp/sim_artifacts
+      LIBGL_ALWAYS_SOFTWARE: "1"           # Mesa llvmpipe: no GPU on the runner
+      IGN_IP: 127.0.0.1                    # keep Gazebo transport on loopback
+      ROS_LOCALHOST_ONLY: "1"
+      RCUTILS_LOGGING_BUFFERED_STREAM: "1"
+    defaults:
+      run:
+        shell: bash
+        working-directory: code/ros2_ws
+    steps:
+      - uses: actions/checkout@v4
+      - run: apt-get update && rosdep update
+      - run: apt-get install -y xvfb mesa-utils ros-humble-ros-gz
+      # sllidar_ros2 and micro_ros_agent are built from source on the robot (not in rosdep), as in ci.yml
+      - run: rosdep install --from-paths src --ignore-src -y --rosdistro humble --skip-keys "sllidar_ros2 micro_ros_agent"
+      - run: apt-get install -y python3-pip && pip3 install "numpy<2" "paho-mqtt>=2" onnx onnxruntime jsonschema
+      - run: ign gazebo --versions && xvfb-run -a -s "-screen 0 1280x1024x24" glxinfo -B
+      - run: source /opt/ros/humble/setup.bash && colcon build --packages-up-to forklift_sim --cmake-args -DFORKLIFT_SIM_TESTS=ON
+      - name: Twin launch tests (headless)
+        run: |
+          source /opt/ros/humble/setup.bash && source install/setup.bash
+          mkdir -p "$SIM_ARTIFACTS"
+          xvfb-run -a -s "-screen 0 1280x1024x24" \
+            colcon test --packages-select forklift_sim --event-handlers console_direct+ --return-code-on-test-failure
+      - if: always()
+        run: source /opt/ros/humble/setup.bash && colcon test-result --all --verbose || true
+      - if: always()
+        run: |
+          cp -r build/forklift_sim/test_results "$SIM_ARTIFACTS/" 2>/dev/null || true
+          cp -r log "$SIM_ARTIFACTS/colcon_log" 2>/dev/null || true
+          cp -r ~/.ros/log "$SIM_ARTIFACTS/ros_log" 2>/dev/null || true
+          find "$SIM_ARTIFACTS" -maxdepth 2 | sort | head -100 || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-artifacts
+          path: /tmp/sim_artifacts
+          if-no-files-found: warn

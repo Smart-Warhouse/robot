@@ -2,16 +2,43 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>forklift_sim</name>
-  <version>0.1.0</version>
-  <description>PLACEHOLDER: Gazebo Harmonic world of the mini warehouse generated from warehouse_map.yaml (EN-11, AI-01, plan B5).</description>
+  <version>0.2.0</version>
+  <description>Full-system digital twin in Gazebo Fortress (ros_gz): warehouse world generated from warehouse_map.yaml, forklifts with LiDAR / camera / IMU / odometry, ros_gz_bridge into /flN, Nav2 stack with use_sim_time (EN-11, AI-01, plan B5).</description>
   <maintainer email="ahmed.emadtarq@gmail.com">Ahmed Imad Tarq</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>nav2_common</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>laser_filters</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <exec_depend>forklift_description</exec_depend>
+  <exec_depend>forklift_navigation</exec_depend>
+  <exec_depend>forklift_bringup</exec_depend>
+
+  <test_depend>launch_testing_ament_cmake</test_depend>
+  <test_depend>launch_testing</test_depend>
+  <test_depend>ros2bag</test_depend>
+  <test_depend>rosbag2_storage_default_plugins</test_depend>
+  <test_depend>nav2_msgs</test_depend>
+  <test_depend>nav_msgs</test_depend>
+  <test_depend>sensor_msgs</test_depend>
+  <test_depend>action_msgs</test_depend>
+  <test_depend>tf2_ros</test_depend>
+  <test_depend>tf2_msgs</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
